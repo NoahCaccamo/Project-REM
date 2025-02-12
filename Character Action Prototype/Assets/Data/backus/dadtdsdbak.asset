@@ -1,0 +1,187 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdcf1ad55ce81c24baec5d5315491bfc, type: 3}
+  m_Name: dadtbak
+  m_EditorClassIdentifier: 
+  characterStates:
+  - stateName: Neutral
+    index: 0
+    length: 60
+    loop: 1
+    blendRate: 0.2
+    events:
+    - start: 0
+      end: 60
+      variable: 0.05
+      script: 3
+    attacks: []
+  - stateName: Jump
+    index: 0
+    length: 15
+    loop: 0
+    blendRate: 0
+    events:
+    - start: 0
+      end: 0
+      variable: 0.25
+      script: 0
+    - start: 0
+      end: 30
+      variable: 0.05
+      script: 3
+    attacks: []
+  - stateName: Dash
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0.5
+      script: 0
+    attacks: []
+  - stateName: Punch
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  - stateName: Dodge
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  - stateName: Enemy/Punch
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  - stateName: Enemy/Slime/Attack1
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  - stateName: Enemy/Skeleton/Attack1
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  - stateName: SlashTest
+    index: 0
+    length: 30
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 0
+      end: 25
+      variable: 0
+      script: 0
+    - start: 0
+      end: 1
+      variable: 0.1
+      script: 1
+    - start: 14
+      end: 14
+      variable: 0.3
+      script: 1
+    - start: 0
+      end: 10
+      variable: 0.03
+      script: 3
+    attacks:
+    - start: 10
+      length: 3
+      hitstun: 60
+      hitAni: {x: 1, y: -1}
+      knockback: {x: 0, y: 0, z: 0.5}
+      hitboxPos: {x: 0, y: 0, z: 0.854}
+      hitboxScale: {x: 2.1692672, y: 1.5388, z: 2.1727}
+  - stateName: SlashTest2
+    index: 0
+    length: 30
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 0
+      end: 10
+      variable: 0.04
+      script: 3
+    - start: 10
+      end: 10
+      variable: 0.31
+      script: 1
+    - start: 5
+      end: 5
+      variable: 0.25
+      script: 0
+    attacks: []
+  - stateName: Slide
+    index: 0
+    length: 0
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 0
+      variable: 0
+      script: 0
+    attacks: []
+  characterScripts:
+  - index: 0
+    name: Velocity Y
+  - index: 0
+    name: Front Velocity
+  - index: 0
+    name: Velocity XZ
+  - index: 0
+    name: Stick Move
+  commands:
+  - inputString: Jump
+    state: 1
+  - inputString: Dash
+    state: 8
+  - inputString: Slash
+    state: 9
+  - inputString: 
+    state: 0
+  - inputString: 
+    state: 0
