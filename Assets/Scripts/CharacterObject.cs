@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor.PackageManager.UI;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 
@@ -46,9 +47,21 @@ public class CharacterObject : MonoBehaviour
 
     public bool wallrunning = false;
 
+    public NavMeshAgent _agent;
+    public Transform _playerTrans;
+    private Vector3 _desVelocity;
+    private float _speed = 2;
+    private float _turnSpeed = 3;
+
+
     void Start()
     {
         myController = GetComponent<CharacterController>();
+        if (controlType == ControlType.AI)
+        {
+            this._agent = this.gameObject.GetComponent<NavMeshAgent>();
+            this._agent.destination = this._playerTrans.position;
+        }
         // myAnimator = GetComponent<Animator>();
     }
 
@@ -94,7 +107,26 @@ public class CharacterObject : MonoBehaviour
 
     void UpdateAI()
     {
+        if (hitStun > 0)
+        {
+            return;
+        }
+        SetVelocity(new Vector3(0f,0f,0f));
+        Vector3 lookPos;
+        Quaternion targetRot;
 
+        this._agent.destination = this._playerTrans.position;
+        this._desVelocity = this._agent.desiredVelocity;
+
+        this._agent.updatePosition = false;
+        this._agent.updateRotation = false;
+
+        lookPos = this._playerTrans.position - this.transform.position;
+        lookPos.y = 0;
+        targetRot = Quaternion.LookRotation(lookPos);
+        this.transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * this._turnSpeed);
+
+       SetVelocity(this._desVelocity.normalized * this._speed * Time.deltaTime);
     }
 
     void FixedUpdate()
@@ -262,6 +294,11 @@ public class CharacterObject : MonoBehaviour
         myController.Move(velocity);
 
         velocity.Scale(friction);
+
+        if (controlType == ControlType.AI && hitStun > 0)
+        {
+            this._agent.velocity = this.myController.velocity;
+        }
 
         //transform.position += velocity;
 
