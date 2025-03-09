@@ -106,7 +106,7 @@ MonoBehaviour:
     groundedReq: 0
   - stateName: Enemy/Punch
     index: 0
-    length: 0
+    length: 25
     loop: 0
     blendRate: 0.1
     events:
@@ -114,7 +114,21 @@ MonoBehaviour:
       end: 0
       variable: 0
       script: 0
-    attacks: []
+    - start: 0
+      end: 5
+      variable: 0.05
+      script: 1
+    attacks:
+    - start: 13
+      length: 7
+      hitstun: 6
+      hitStop: 6
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0, z: 0.6}
+      hitboxPos: {x: -0, y: 0, z: 1.72}
+      hitboxScale: {x: 4.15, y: 1, z: 3.02}
+      cancelWindow: 0
+      playerBoost: 0
     jumpReq: 0
     meterReq: 0
     dashCooldownReq: 0

@@ -81,7 +81,7 @@ public class CharacterObject : MonoBehaviour
     }
     // END INVENTORY STUFF
 
-    private void Update()
+    private void Updaste()
     {
         // hitcancel preferabbly before input but does this need to be in fixed update
         // HitCancel();
@@ -105,12 +105,17 @@ public class CharacterObject : MonoBehaviour
 
     }
 
+    public float atkCooldown = 60;
     void UpdateAI()
     {
+        
         if (hitStun > 0)
         {
             return;
         }
+        /* wack navmesh hacky stuff
+        
+
         SetVelocity(new Vector3(0f,0f,0f));
         Vector3 lookPos;
         Quaternion targetRot;
@@ -127,9 +132,34 @@ public class CharacterObject : MonoBehaviour
         this.transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * this._turnSpeed);
 
        SetVelocity(this._desVelocity.normalized * this._speed * Time.deltaTime);
+        */
+
+        Vector3 velDir = new Vector3(0,0,0);
+        if (Vector3.Distance(this._playerTrans.position, this.gameObject.transform.position) > 4)
+        {
+            velDir = this._playerTrans.position - this.gameObject.transform.position;
+            velDir.y = 0;
+            velDir.Normalize();
+
+            velDir *= 0.02f;
+        }
+        else // get ready to attack
+        {
+            atkCooldown--;
+            if (atkCooldown == 0)
+            {
+                StartState(5); // Enemy punch
+            }
+            if (atkCooldown < -120)
+            {
+                atkCooldown = 60;
+            }
+        }
+
+        velocity += velDir;
     }
 
-    void FixedUpdate()
+    void Update()
     {
         if (GameEngine.hitStop <= 0)
         {
