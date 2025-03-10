@@ -222,7 +222,7 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 7
       hitAni: {x: 0, y: 0}
       knockback: {x: 0, y: 0.8, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
@@ -258,7 +258,7 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 7
       hitAni: {x: 0, y: 0}
       knockback: {x: 0, y: 1, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
@@ -283,7 +283,7 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 5
       hitAni: {x: 0, y: 0}
       knockback: {x: 0, y: 0, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
@@ -478,7 +478,7 @@ MonoBehaviour:
     - start: 8
       length: 3
       hitstun: 30
-      hitStop: 5
+      hitStop: 10
       hitAni: {x: 1, y: -1}
       knockback: {x: 0, y: 0.12, z: 1.5}
       hitboxPos: {x: 0, y: 0, z: 0.854}
@@ -731,7 +731,7 @@ MonoBehaviour:
         input: 6
         state: 2
         inputs: 
-      priority: 0
+      priority: 3
       followUps: 
       strict: 0
       myRect:
