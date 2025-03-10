@@ -14,6 +14,8 @@ public class CharacterObject : MonoBehaviour
 {
     public InventoryObject inventory;
 
+    public int hp = 10;
+
     public Vector3 velocity;
 
     public Vector3 gravity = new Vector3(0, -0.01f, 0);
@@ -399,6 +401,12 @@ public class CharacterObject : MonoBehaviour
         currentState = 0;
         prevStateTime = -1;
         StartState(currentState);
+
+        // DESTROY AFTER HITSTUN IS DONE HACKY
+        if (hp <= 0)
+        {
+            Destroy(this.gameObject);
+        }
     }
 
     void UpdateStateEvents()
@@ -837,6 +845,9 @@ public class CharacterObject : MonoBehaviour
     public Vector2 targetHitAni;
     public void GetHit(CharacterObject attacker)
     {
+
+        hp--;
+        Debug.Log(hp);
         Attack curAtk = GameEngine.coreData.characterStates[attacker.currentState].attacks[attacker.currentAttackIndex];
 
         // should be getter/setter instead of raw reset
@@ -871,6 +882,16 @@ public class CharacterObject : MonoBehaviour
             attacker.VelocityY(curAtk.playerBoost);
         }
 
+
+        // hacky death check in wrong place and should be its own state
+        if (hp <= 0)
+        {
+            hitStun = 60;
+            nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
+            nextKnockback.y = 1.5f;
+            SetVelocity(nextKnockback);
+        }
+
         // uneeded sets in startstate currentState = 3; 
         StartState(3); // magic number  hitstun state in coredata
         GlobalPrefab(0); // more magic number
@@ -881,6 +902,13 @@ public class CharacterObject : MonoBehaviour
     {
         hitStun--;
         if (hitStun <= 0) { EndState(); }
+
+        // HACKY PLACE FOR PROTOTYPE MOVE THIS
+        //Dramatic freeze before death
+        if (hitStun < 30 && hp <=0)
+        {
+            SetVelocity(new Vector3(0f, 0f, 0f));
+        }
 
         // bending the current hit ani num to the target multiplied by blend rate
         // could change this blend based on hitstun
