@@ -49,11 +49,15 @@ public class CharacterObject : MonoBehaviour
 
     public bool wallrunning = false;
 
+
+    // experimental Ai stuff
     public NavMeshAgent _agent;
     public Transform _playerTrans;
     private Vector3 _desVelocity;
     private float _speed = 2;
     private float _turnSpeed = 3;
+
+    public LayerMask whatIsPlayer;
 
 
     void Start()
@@ -113,6 +117,7 @@ public class CharacterObject : MonoBehaviour
         
         if (hitStun > 0)
         {
+            atkCooldown = 60;
             return;
         }
         /* wack navmesh hacky stuff
@@ -136,30 +141,42 @@ public class CharacterObject : MonoBehaviour
        SetVelocity(this._desVelocity.normalized * this._speed * Time.deltaTime);
         */
 
-        Vector3 velDir = new Vector3(0,0,0);
-        if (Vector3.Distance(this._playerTrans.position, this.gameObject.transform.position) > 4)
-        {
-            velDir = this._playerTrans.position - this.gameObject.transform.position;
-            velDir.y = 0;
-            velDir.Normalize();
 
-            velDir *= 0.02f;
-        }
-        else // get ready to attack
-        {
-            atkCooldown--;
-            if (atkCooldown == 0)
-            {
-                StartState(5); // Enemy punch
-            }
-            if (atkCooldown < -120)
-            {
-                atkCooldown = 60;
-            }
-        }
+        bool playerInSightRange = Physics.CheckSphere(transform.position, 10, whatIsPlayer);
+        bool playerInAttackRange = Physics.CheckSphere(transform.position, 2, whatIsPlayer);
+
+        if (!playerInSightRange && !playerInAttackRange) { target = null; return; }
+        if (playerInSightRange && !playerInAttackRange) ChasePlayer();
+        if (playerInSightRange && playerInAttackRange) AttackPlayer();
+    }
+
+    private void ChasePlayer()
+    {
+        Vector3 velDir = new Vector3(0, 0, 0);
+
+        velDir = this._playerTrans.position - this.gameObject.transform.position;
+        velDir.y = 0;
+        velDir.Normalize();
+
+        velDir *= 0.02f;
 
         velocity += velDir;
     }
+
+    private void AttackPlayer()
+    {
+        atkCooldown--;
+        if (atkCooldown == 0)
+        {
+            FaceTarget(this._playerTrans.position);
+            StartState(5); // Enemy punch
+        }
+        if (atkCooldown < -120)
+        {
+            atkCooldown = 60;
+        }
+    }
+
 
     void Update()
     {
@@ -250,17 +267,7 @@ public class CharacterObject : MonoBehaviour
     {
         if (CheckVelocityDeadZone())
         {
-            if (targeting)
-            {
-                if (target != null)
-                {
-                    FaceTarget(target.transform.position);
-                }
-            }
-            else
-            {
-                character.transform.rotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z), Vector3.up);
-            }
+            character.transform.rotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z), Vector3.up);
         }
     }
 
@@ -362,7 +369,16 @@ public class CharacterObject : MonoBehaviour
 
         if (hitStun <= 0)
         {
-            FaceVelocity();
+            if (targeting)
+            {
+                if (target != null)
+                {
+                    FaceTarget(target.transform.position);
+                }
+            } else
+            {
+                FaceVelocity();
+            }
         }
     }
 
@@ -846,14 +862,25 @@ public class CharacterObject : MonoBehaviour
     public void GetHit(CharacterObject attacker)
     {
 
-        hp--;
-        Debug.Log(hp);
         Attack curAtk = GameEngine.coreData.characterStates[attacker.currentState].attacks[attacker.currentAttackIndex];
 
         // should be getter/setter instead of raw reset
         // does not take into acount multiple enemies rn
         attacker.hitActive = 0;
         //Vector3 targetOffset = transform.position
+
+        if (currentState == 21) // HARDCODED 21 = parry
+        {
+            Vector3 knockOrientation2 = -attacker.character.transform.forward;
+            attacker.SetVelocity(Quaternion.LookRotation(knockOrientation2) * curAtk.knockback);
+            GameEngine.SetHitStop(curAtk.hitStop);
+            attacker.hitStun = 20;
+            attacker.StartState(3); // 3 = hitstun state
+            return;
+        }
+
+        hp--;
+        Debug.Log(hp);
 
         Vector3 nextKnockback = curAtk.knockback;
         Vector3 knockOrientation = attacker.character.transform.forward;

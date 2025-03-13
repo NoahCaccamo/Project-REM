@@ -518,6 +518,21 @@ MonoBehaviour:
     meterReq: 0
     dashCooldownReq: 0
     groundedReq: 0
+  - stateName: Parry
+    index: 0
+    length: 10
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 1
+      end: 5
+      variable: 0
+      script: 0
+    attacks: []
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
   characterScripts:
   - index: 0
     name: Velocity Y
@@ -665,7 +680,7 @@ MonoBehaviour:
       command:
         motionCommand: 0
         input: 2
-        state: 13
+        state: 21
         inputs: 
       priority: 0
       followUps: 
