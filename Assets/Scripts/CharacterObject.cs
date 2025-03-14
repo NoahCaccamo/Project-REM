@@ -623,6 +623,8 @@ public class CharacterObject : MonoBehaviour
     void Invulnerable(float _val)
     {
         if (_val > 0) { invulnerable = true; }
+        // also increment time invulnerable and reset when state changes
+        // this way perfect dodge can check if player was hit in the first few frames of a dodge
         else { invulnerable = false; }
     }
 
