@@ -49,6 +49,7 @@ public class CharacterObject : MonoBehaviour
 
     public bool wallrunning = false;
 
+    public bool invulnerable = false;
 
     // experimental Ai stuff
     public NavMeshAgent _agent;
@@ -533,6 +534,9 @@ public class CharacterObject : MonoBehaviour
             case 10:
                 VelocityToTarget(_var);
                 break;
+            case 11:
+                Invulnerable(_var);
+                break;
         }
     }
 
@@ -616,6 +620,12 @@ public class CharacterObject : MonoBehaviour
         velocity.y = _pow;
     }
 
+    void Invulnerable(float _val)
+    {
+        if (_val > 0) { invulnerable = true; }
+        else { invulnerable = false; }
+    }
+
     // This is the old Unity input system
     public float deadzone = 0.2f;
 
@@ -628,6 +638,7 @@ public class CharacterObject : MonoBehaviour
         prevStateTime = -1;
         currentStateTime = 0;
         canCancel = false;
+        invulnerable = false;
 
         // Attack
         hitActive = 0;
@@ -861,6 +872,10 @@ public class CharacterObject : MonoBehaviour
     public Vector2 targetHitAni;
     public void GetHit(CharacterObject attacker)
     {
+        if (invulnerable)
+        {
+            return;
+        }
 
         Attack curAtk = GameEngine.coreData.characterStates[attacker.currentState].attacks[attacker.currentAttackIndex];
 

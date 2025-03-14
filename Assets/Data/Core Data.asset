@@ -69,6 +69,10 @@ MonoBehaviour:
       end: 13
       variable: 1
       script: 6
+    - start: 1
+      end: 13
+      variable: 1
+      script: 12
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -608,6 +612,8 @@ MonoBehaviour:
     name: Velocity To Target
   - index: 0
     name: Excess Memory
+  - index: 0
+    name: Invulnerable
   commandStates:
   - stateName: Grounded
     aerial: 0
