@@ -51,6 +51,8 @@ public class CharacterObject : MonoBehaviour
 
     public bool invulnerable = false;
 
+    public bool faceStick = false;
+
     // experimental Ai stuff
     public NavMeshAgent _agent;
     public Transform _playerTrans;
@@ -370,7 +372,10 @@ public class CharacterObject : MonoBehaviour
 
         if (hitStun <= 0)
         {
-            if (targeting)
+            if (faceStick)
+            {
+                return;
+            }else if (targeting)
             {
                 if (target != null)
                 {
@@ -572,6 +577,7 @@ public class CharacterObject : MonoBehaviour
             velHelp.y = 0;
 
             Debug.Log("FACING THE STick");
+            faceStick = true;
             character.transform.rotation = Quaternion.Lerp(character.transform.rotation, Quaternion.LookRotation(new Vector3(velHelp.x, 0, velHelp.z), Vector3.up), _rate);
         }
 
@@ -642,13 +648,15 @@ public class CharacterObject : MonoBehaviour
         canCancel = false;
         invulnerable = false;
 
+        faceStick = false;
+
         // Attack
         hitActive = 0;
         hitConfirm = 0;
 
         SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
-        if (hitStun <= 0) { FaceStick(1); }
+        if (hitStun <= 0) { FaceStick(1); faceStick = false; }
     }
 
     void SetAnimation(string aniName)
