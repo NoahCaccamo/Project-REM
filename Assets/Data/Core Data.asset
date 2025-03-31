@@ -595,6 +595,31 @@ MonoBehaviour:
     meterReq: 0
     dashCooldownReq: 0
     groundedReq: 0
+  - stateName: UpFinisher
+    index: 0
+    length: 30
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 0
+      end: 0
+      variable: 0.05
+      script: 9
+    attacks:
+    - start: 8
+      length: 3
+      hitstun: 30
+      hitStop: 10
+      hitAni: {x: 0, y: 1}
+      knockback: {x: 0, y: 1.7, z: 0.15}
+      hitboxPos: {x: 0, y: 0, z: 0.854}
+      hitboxScale: {x: 2.1692672, y: 1.5388, z: 2.1727}
+      cancelWindow: 8
+      playerBoost: 0.65
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
   characterScripts:
   - index: 0
     name: Velocity Y
@@ -633,7 +658,7 @@ MonoBehaviour:
         state: 0
         inputs: 
       priority: 0
-      followUps: 01000000060000000700000008000000090000000a0000000b0000000c000000
+      followUps: 01000000060000000700000008000000090000000a0000000b000000
       strict: 0
       myRect:
         serializedVersion: 2
@@ -681,7 +706,7 @@ MonoBehaviour:
         state: 8
         inputs: 
       priority: 1
-      followUps: 04000000
+      followUps: 040000000c000000
       strict: 0
       myRect:
         serializedVersion: 2
@@ -742,7 +767,7 @@ MonoBehaviour:
       command:
         motionCommand: 0
         input: 2
-        state: 21
+        state: 13
         inputs: 
       priority: 0
       followUps: 
@@ -821,21 +846,21 @@ MonoBehaviour:
     - idIndex: 12
       command:
         motionCommand: 0
-        input: 2
-        state: 4
+        input: 3
+        state: 22
         inputs: 
       priority: 0
       followUps: 
       strict: 0
       myRect:
         serializedVersion: 2
-        x: 624
-        y: 389
+        x: 578
+        y: 145
         width: 175
         height: 50
-      activated: 0
-    omitList: 02000000030000000500000004000000
-    nextFollowups: 01000000060000000700000008000000090000000a0000000b0000000c000000
+      activated: 1
+    omitList: 020000000300000005000000040000000c000000
+    nextFollowups: 01000000060000000700000008000000090000000a0000000b000000
   - stateName: Aerial
     aerial: 1
     explicitState: 0
