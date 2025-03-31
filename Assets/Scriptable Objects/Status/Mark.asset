@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b8d28842a3ee884faa5eb8e85a175ae, type: 3}
+  m_Name: Mark
+  m_EditorClassIdentifier: 
+  Name: Mark
+  Stacks: 0
+  Lifetime: 2400
+  EffectIcon: {fileID: 1829582802309809458, guid: 3164c4a9e5e9aec49a6d0b7814b36791,
+    type: 3}

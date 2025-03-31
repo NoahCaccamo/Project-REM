@@ -10,8 +10,10 @@ using static InputBuffer;
 
 // https://youtu.be/zAIdyNDBe0A?si=7HMFTwJ7_uMWFrty&t=1758
 
-public class CharacterObject : MonoBehaviour
+public class CharacterObject : MonoBehaviour, IEffectable
 {
+    public StatusEffectData _data;
+
     public InventoryObject inventory;
 
     public int hp = 10;
@@ -207,6 +209,7 @@ public class CharacterObject : MonoBehaviour
             // Update physics
             UpdatePhysics();
 
+            if (_data != null) HandleEffect();
         }
         UpdateTimers();
         UpdateAnimation();
@@ -934,6 +937,12 @@ public class CharacterObject : MonoBehaviour
             attacker.VelocityY(curAtk.playerBoost);
         }
 
+        // Status Effects
+        if (curAtk.statusData)
+        {
+            ApplyEffect(curAtk.statusData);
+        }
+
 
         // hacky death check in wrong place and should be its own state
         if (hp <= 0)
@@ -988,5 +997,30 @@ public class CharacterObject : MonoBehaviour
         }
 
         return false;
+    }
+
+    private GameObject _effectIcon;
+    public void ApplyEffect(StatusEffectData _data)
+    {
+        RemoveEffect();
+        this._data = _data;
+        _effectIcon = Instantiate(_data.EffectIcon, transform);
+
+    }
+
+    public void RemoveEffect()
+    {
+        _data = null;
+        currentEffectTime = 0;
+        if (_effectIcon != null) { Destroy(_effectIcon); }
+    }
+
+    private float currentEffectTime = 0f;
+    private float lastTickTime = 0f;
+    public void HandleEffect()
+    {
+        currentEffectTime += 1; //or delta later
+
+        if (currentEffectTime >= _data.Lifetime) RemoveEffect();
     }
 }
