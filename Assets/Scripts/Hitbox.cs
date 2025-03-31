@@ -31,7 +31,7 @@ public class Hitbox : MonoBehaviour
                 // slowwww
                 CharacterObject victim = other.transform.root.GetComponent<CharacterObject>();
                 victim.GetHit(character);
-                //Debug.Log("HIT!");
+                Debug.Log("HIT!");
             }
         }
     }

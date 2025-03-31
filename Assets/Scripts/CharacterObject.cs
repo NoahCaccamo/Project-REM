@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor.PackageManager.UI;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 
@@ -12,6 +13,8 @@ using static InputBuffer;
 public class CharacterObject : MonoBehaviour
 {
     public InventoryObject inventory;
+
+    public int hp = 10;
 
     public Vector3 velocity;
 
@@ -46,9 +49,28 @@ public class CharacterObject : MonoBehaviour
 
     public bool wallrunning = false;
 
+    public bool invulnerable = false;
+
+    public bool faceStick = false;
+
+    // experimental Ai stuff
+    public NavMeshAgent _agent;
+    public Transform _playerTrans;
+    private Vector3 _desVelocity;
+    private float _speed = 2;
+    private float _turnSpeed = 3;
+
+    public LayerMask whatIsPlayer;
+
+
     void Start()
     {
         myController = GetComponent<CharacterController>();
+        if (controlType == ControlType.AI)
+        {
+            this._agent = this.gameObject.GetComponent<NavMeshAgent>();
+            this._agent.destination = this._playerTrans.position;
+        }
         // myAnimator = GetComponent<Animator>();
     }
 
@@ -68,7 +90,7 @@ public class CharacterObject : MonoBehaviour
     }
     // END INVENTORY STUFF
 
-    private void Update()
+    private void Updaste()
     {
         // hitcancel preferabbly before input but does this need to be in fixed update
         // HitCancel();
@@ -92,12 +114,74 @@ public class CharacterObject : MonoBehaviour
 
     }
 
+    public float atkCooldown = 60;
     void UpdateAI()
     {
+        
+        if (hitStun > 0)
+        {
+            atkCooldown = 60;
+            return;
+        }
+        /* wack navmesh hacky stuff
+        
 
+        SetVelocity(new Vector3(0f,0f,0f));
+        Vector3 lookPos;
+        Quaternion targetRot;
+
+        this._agent.destination = this._playerTrans.position;
+        this._desVelocity = this._agent.desiredVelocity;
+
+        this._agent.updatePosition = false;
+        this._agent.updateRotation = false;
+
+        lookPos = this._playerTrans.position - this.transform.position;
+        lookPos.y = 0;
+        targetRot = Quaternion.LookRotation(lookPos);
+        this.transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * this._turnSpeed);
+
+       SetVelocity(this._desVelocity.normalized * this._speed * Time.deltaTime);
+        */
+
+
+        bool playerInSightRange = Physics.CheckSphere(transform.position, 10, whatIsPlayer);
+        bool playerInAttackRange = Physics.CheckSphere(transform.position, 2, whatIsPlayer);
+
+        if (!playerInSightRange && !playerInAttackRange) { target = null; return; }
+        if (playerInSightRange && !playerInAttackRange) ChasePlayer();
+        if (playerInSightRange && playerInAttackRange) AttackPlayer();
     }
 
-    void FixedUpdate()
+    private void ChasePlayer()
+    {
+        Vector3 velDir = new Vector3(0, 0, 0);
+
+        velDir = this._playerTrans.position - this.gameObject.transform.position;
+        velDir.y = 0;
+        velDir.Normalize();
+
+        velDir *= 0.02f;
+
+        velocity += velDir;
+    }
+
+    private void AttackPlayer()
+    {
+        atkCooldown--;
+        if (atkCooldown == 0)
+        {
+            FaceTarget(this._playerTrans.position);
+            StartState(5); // Enemy punch
+        }
+        if (atkCooldown < -120)
+        {
+            atkCooldown = 60;
+        }
+    }
+
+
+    void Update()
     {
         if (GameEngine.hitStop <= 0)
         {
@@ -186,17 +270,7 @@ public class CharacterObject : MonoBehaviour
     {
         if (CheckVelocityDeadZone())
         {
-            if (targeting)
-            {
-                if (target != null)
-                {
-                    FaceTarget(target.transform.position);
-                }
-            }
-            else
-            {
-                character.transform.rotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z), Vector3.up);
-            }
+            character.transform.rotation = Quaternion.LookRotation(new Vector3(velocity.x, 0, velocity.z), Vector3.up);
         }
     }
 
@@ -263,6 +337,11 @@ public class CharacterObject : MonoBehaviour
 
         velocity.Scale(friction);
 
+        if (controlType == ControlType.AI && hitStun > 0)
+        {
+            this._agent.velocity = this.myController.velocity;
+        }
+
         //transform.position += velocity;
 
         // Aerial Check
@@ -293,7 +372,19 @@ public class CharacterObject : MonoBehaviour
 
         if (hitStun <= 0)
         {
-            FaceVelocity();
+            if (faceStick)
+            {
+                return;
+            }else if (targeting)
+            {
+                if (target != null)
+                {
+                    FaceTarget(target.transform.position);
+                }
+            } else
+            {
+                FaceVelocity();
+            }
         }
     }
 
@@ -332,6 +423,12 @@ public class CharacterObject : MonoBehaviour
         currentState = 0;
         prevStateTime = -1;
         StartState(currentState);
+
+        // DESTROY AFTER HITSTUN IS DONE HACKY
+        if (hp <= 0)
+        {
+            Destroy(this.gameObject);
+        }
     }
 
     void UpdateStateEvents()
@@ -442,6 +539,9 @@ public class CharacterObject : MonoBehaviour
             case 10:
                 VelocityToTarget(_var);
                 break;
+            case 11:
+                Invulnerable(_var);
+                break;
         }
     }
 
@@ -477,6 +577,7 @@ public class CharacterObject : MonoBehaviour
             velHelp.y = 0;
 
             Debug.Log("FACING THE STick");
+            faceStick = true;
             character.transform.rotation = Quaternion.Lerp(character.transform.rotation, Quaternion.LookRotation(new Vector3(velHelp.x, 0, velHelp.z), Vector3.up), _rate);
         }
 
@@ -525,6 +626,14 @@ public class CharacterObject : MonoBehaviour
         velocity.y = _pow;
     }
 
+    void Invulnerable(float _val)
+    {
+        if (_val > 0) { invulnerable = true; }
+        // also increment time invulnerable and reset when state changes
+        // this way perfect dodge can check if player was hit in the first few frames of a dodge
+        else { invulnerable = false; }
+    }
+
     // This is the old Unity input system
     public float deadzone = 0.2f;
 
@@ -537,6 +646,9 @@ public class CharacterObject : MonoBehaviour
         prevStateTime = -1;
         currentStateTime = 0;
         canCancel = false;
+        invulnerable = false;
+
+        faceStick = false;
 
         // Attack
         hitActive = 0;
@@ -544,7 +656,7 @@ public class CharacterObject : MonoBehaviour
 
         SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
-        if (hitStun <= 0) { FaceStick(1); }
+        if (hitStun <= 0) { FaceStick(1); faceStick = false; }
     }
 
     void SetAnimation(string aniName)
@@ -770,12 +882,30 @@ public class CharacterObject : MonoBehaviour
     public Vector2 targetHitAni;
     public void GetHit(CharacterObject attacker)
     {
+        if (invulnerable)
+        {
+            return;
+        }
+
         Attack curAtk = GameEngine.coreData.characterStates[attacker.currentState].attacks[attacker.currentAttackIndex];
 
         // should be getter/setter instead of raw reset
         // does not take into acount multiple enemies rn
         attacker.hitActive = 0;
         //Vector3 targetOffset = transform.position
+
+        if (currentState == 21) // HARDCODED 21 = parry
+        {
+            Vector3 knockOrientation2 = -attacker.character.transform.forward;
+            attacker.SetVelocity(Quaternion.LookRotation(knockOrientation2) * curAtk.knockback);
+            GameEngine.SetHitStop(curAtk.hitStop);
+            attacker.hitStun = 20;
+            attacker.StartState(3); // 3 = hitstun state
+            return;
+        }
+
+        hp--;
+        Debug.Log(hp);
 
         Vector3 nextKnockback = curAtk.knockback;
         Vector3 knockOrientation = attacker.character.transform.forward;
@@ -804,6 +934,16 @@ public class CharacterObject : MonoBehaviour
             attacker.VelocityY(curAtk.playerBoost);
         }
 
+
+        // hacky death check in wrong place and should be its own state
+        if (hp <= 0)
+        {
+            hitStun = 60;
+            nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
+            nextKnockback.y = 1.5f;
+            SetVelocity(nextKnockback);
+        }
+
         // uneeded sets in startstate currentState = 3; 
         StartState(3); // magic number  hitstun state in coredata
         GlobalPrefab(0); // more magic number
@@ -814,6 +954,13 @@ public class CharacterObject : MonoBehaviour
     {
         hitStun--;
         if (hitStun <= 0) { EndState(); }
+
+        // HACKY PLACE FOR PROTOTYPE MOVE THIS
+        //Dramatic freeze before death
+        if (hitStun < 30 && hp <=0)
+        {
+            SetVelocity(new Vector3(0f, 0f, 0f));
+        }
 
         // bending the current hit ani num to the target multiplied by blend rate
         // could change this blend based on hitstun

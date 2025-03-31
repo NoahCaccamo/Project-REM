@@ -61,14 +61,26 @@ MonoBehaviour:
     loop: 0
     blendRate: 0.1
     events:
-    - start: 0
+    - start: 6
       end: 13
-      variable: 0.15
+      variable: 0.07
       script: 1
     - start: 3
       end: 13
       variable: 1
       script: 6
+    - start: 1
+      end: 13
+      variable: 1
+      script: 11
+    - start: 0
+      end: 5
+      variable: 1
+      script: 9
+    - start: 0
+      end: 5
+      variable: 0.2
+      script: 1
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -106,7 +118,7 @@ MonoBehaviour:
     groundedReq: 0
   - stateName: Enemy/Punch
     index: 0
-    length: 0
+    length: 25
     loop: 0
     blendRate: 0.1
     events:
@@ -114,7 +126,21 @@ MonoBehaviour:
       end: 0
       variable: 0
       script: 0
-    attacks: []
+    - start: 0
+      end: 5
+      variable: 0.05
+      script: 1
+    attacks:
+    - start: 13
+      length: 7
+      hitstun: 6
+      hitStop: 6
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0, z: 0.6}
+      hitboxPos: {x: -0, y: 0, z: 1.72}
+      hitboxScale: {x: 4.15, y: 1, z: 3.02}
+      cancelWindow: 0
+      playerBoost: 0
     jumpReq: 0
     meterReq: 0
     dashCooldownReq: 0
@@ -208,11 +234,61 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 7
       hitAni: {x: 0, y: 0}
-      knockback: {x: 0, y: 0.8, z: 0.1}
+      knockback: {x: 0, y: 1.4, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
       hitboxScale: {x: 2.32, y: 2.8770218, z: 2.28}
+      cancelWindow: 8
+      playerBoost: 0
+    - start: 14
+      length: 16
+      hitstun: 30
+      hitStop: 4
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0.1, z: 0}
+      hitboxPos: {x: 0, y: 0.46, z: 0.59}
+      hitboxScale: {x: 5, y: 5, z: 5}
+      cancelWindow: 8
+      playerBoost: 0
+    - start: 16
+      length: 18
+      hitstun: 30
+      hitStop: 4
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0.1, z: 0}
+      hitboxPos: {x: 0, y: 0.46, z: 0.59}
+      hitboxScale: {x: 5, y: 5, z: 5}
+      cancelWindow: 8
+      playerBoost: 0
+    - start: 18
+      length: 20
+      hitstun: 30
+      hitStop: 4
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0.1, z: 0}
+      hitboxPos: {x: 0, y: 0.46, z: 0.59}
+      hitboxScale: {x: 5, y: 5, z: 5}
+      cancelWindow: 8
+      playerBoost: 0
+    - start: 18
+      length: 20
+      hitstun: 30
+      hitStop: 4
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0.1, z: 0}
+      hitboxPos: {x: 0, y: 0.46, z: 0.59}
+      hitboxScale: {x: 5, y: 5, z: 5}
+      cancelWindow: 8
+      playerBoost: 0
+    - start: 22
+      length: 24
+      hitstun: 30
+      hitStop: 4
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: 0, z: 0}
+      hitboxPos: {x: 0, y: 0.46, z: 0.59}
+      hitboxScale: {x: 5, y: 5, z: 5}
       cancelWindow: 8
       playerBoost: 0
     jumpReq: 0
@@ -244,7 +320,7 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 7
       hitAni: {x: 0, y: 0}
       knockback: {x: 0, y: 1, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
@@ -269,7 +345,7 @@ MonoBehaviour:
     - start: 8
       length: 7
       hitstun: 30
-      hitStop: 20
+      hitStop: 5
       hitAni: {x: 0, y: 0}
       knockback: {x: 0, y: 0, z: 0.1}
       hitboxPos: {x: 0, y: 0.46, z: 0.59}
@@ -464,7 +540,7 @@ MonoBehaviour:
     - start: 8
       length: 3
       hitstun: 30
-      hitStop: 5
+      hitStop: 10
       hitAni: {x: 1, y: -1}
       knockback: {x: 0, y: 0.12, z: 1.5}
       hitboxPos: {x: 0, y: 0, z: 0.854}
@@ -504,6 +580,46 @@ MonoBehaviour:
     meterReq: 0
     dashCooldownReq: 0
     groundedReq: 0
+  - stateName: Parry
+    index: 0
+    length: 10
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 1
+      end: 5
+      variable: 0
+      script: 0
+    attacks: []
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
+  - stateName: UpFinisher
+    index: 0
+    length: 30
+    loop: 0
+    blendRate: 0.05
+    events:
+    - start: 0
+      end: 0
+      variable: 0.05
+      script: 9
+    attacks:
+    - start: 8
+      length: 3
+      hitstun: 30
+      hitStop: 10
+      hitAni: {x: 0, y: 1}
+      knockback: {x: 0, y: 1.7, z: 0.15}
+      hitboxPos: {x: 0, y: 0, z: 0.854}
+      hitboxScale: {x: 2.1692672, y: 1.5388, z: 2.1727}
+      cancelWindow: 8
+      playerBoost: 0.65
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
   characterScripts:
   - index: 0
     name: Velocity Y
@@ -528,7 +644,7 @@ MonoBehaviour:
   - index: 0
     name: Velocity To Target
   - index: 0
-    name: Excess Memory
+    name: Invulnerable
   commandStates:
   - stateName: Grounded
     aerial: 0
@@ -542,7 +658,7 @@ MonoBehaviour:
         state: 0
         inputs: 
       priority: 0
-      followUps: 01000000060000000700000008000000090000000a0000000b0000000c000000
+      followUps: 01000000060000000700000008000000090000000a0000000b000000
       strict: 0
       myRect:
         serializedVersion: 2
@@ -590,7 +706,7 @@ MonoBehaviour:
         state: 8
         inputs: 
       priority: 1
-      followUps: 04000000
+      followUps: 040000000c000000
       strict: 0
       myRect:
         serializedVersion: 2
@@ -717,34 +833,34 @@ MonoBehaviour:
         input: 6
         state: 2
         inputs: 
-      priority: 0
+      priority: 3
       followUps: 
       strict: 0
       myRect:
         serializedVersion: 2
-        x: 338
-        y: 412
+        x: 360
+        y: 383
         width: 175
         height: 50
       activated: 1
     - idIndex: 12
       command:
         motionCommand: 0
-        input: 2
-        state: 4
+        input: 3
+        state: 22
         inputs: 
       priority: 0
       followUps: 
       strict: 0
       myRect:
         serializedVersion: 2
-        x: 624
-        y: 389
+        x: 578
+        y: 145
         width: 175
         height: 50
-      activated: 0
-    omitList: 02000000030000000500000004000000
-    nextFollowups: 01000000060000000700000008000000090000000a0000000b0000000c000000
+      activated: 1
+    omitList: 020000000300000005000000040000000c000000
+    nextFollowups: 01000000060000000700000008000000090000000a0000000b000000
   - stateName: Aerial
     aerial: 1
     explicitState: 0
