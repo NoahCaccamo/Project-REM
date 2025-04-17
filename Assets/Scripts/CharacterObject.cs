@@ -68,11 +68,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void Start()
     {
         myController = GetComponent<CharacterController>();
-        if (controlType == ControlType.AI)
-        {
-            this._agent = this.gameObject.GetComponent<NavMeshAgent>();
-            this._agent.destination = this._playerTrans.position;
-        }
         // myAnimator = GetComponent<Animator>();
     }
 
@@ -185,22 +180,25 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void Update()
     {
+        switch (controlType)
+        {
+            case ControlType.AI:
+                UpdateAI();
+                break;
+
+            case ControlType.PLAYER:
+                UpdateInput();
+                break;
+        }
+    }
+
+    void FixedUpdate()
+    {
         if (GameEngine.hitStop <= 0)
         {
             // UpdateInputBuffer
 
             // Update Input
-            
-            switch (controlType)
-            {
-                case ControlType.AI:
-                    UpdateAI();
-                    break;
-
-                case ControlType.PLAYER:
-                    UpdateInput();
-                    break;
-            }
             
 
             // Update State Machine
