@@ -48,6 +48,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public bool targeting = false;
     public GameObject target;
+    public GameObject softTarget = null;
 
     public bool wallrunning = false;
 
@@ -196,6 +197,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         if (GameEngine.hitStop <= 0)
         {
+
+            softTarget = TargetClosestEnemy();
             // UpdateInputBuffer
 
             // Update Input
@@ -371,6 +374,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
             }
         }
 
+        // this is bad and ruins launchers. make event work with dash better
         if (hitStun <= 0)
         {
             if (faceStick)
@@ -548,7 +552,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void VelocityToTarget(float _pow)
     {
-        TargetClosestEnemy();
+        target = TargetClosestEnemy();
         if (target)
         {
             Debug.Log("zoomin");
@@ -658,6 +662,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
         SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
         if (hitStun <= 0) { FaceStick(1); faceStick = false; }
+
+        if (softTarget)
+        {
+            FaceTarget(softTarget.gameObject.transform.position);
+            faceStick = false;
+        }
     }
 
     void SetAnimation(string aniName)
@@ -697,7 +707,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (Input.GetButtonDown("RB")) 
         {
-            TargetClosestEnemy();
+            target = TargetClosestEnemy();
         }
 
         inputBuffer.Update();
@@ -849,12 +859,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
         velocity = v;
     }
 
-    public void TargetClosestEnemy()
+    public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
         Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, 128);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
+
+        GameObject _target = null;
 
         foreach (Collider hitEnemy in hitEnemies)
         {
@@ -869,13 +881,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (closestEnemy)
         {
-            target = closestEnemy;
+            _target = closestEnemy;
         }
         else
         {
-            target = null;
+            _target = null;
         }
 
+
+        return _target;
     }
 
 
