@@ -455,7 +455,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
         {
             // hitconfirm here with sepearate flag if we want to count attack hits rather than skill?
-            if (currentStateTime == _atk.start) // could do a greater catch window when manipulating timescale
+            if (currentStateTime >= _atk.start && currentStateTime <= _atk.start + 1) // could do a greater catch window when manipulating timescale
             {
                 hitActive = _atk.length;
                 hitbox.transform.localScale = _atk.hitboxScale;
@@ -463,7 +463,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 currentAttackIndex = _cur;
             }
 
-            if (currentStateTime == _atk.start + _atk.length)
+            if (currentStateTime >= _atk.start + _atk.length)
             {
                 hitActive = 0;
             }
