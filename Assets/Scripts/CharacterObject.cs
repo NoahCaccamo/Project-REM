@@ -218,7 +218,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void UpdateTimers()
     {
-        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate; }
+        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime; }
     }
 
     public float aniMoveSpeed;
@@ -335,16 +335,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void UpdatePhysics()
     {
 
-        velocity += gravity;
+        velocity += gravity * Time.deltaTime * 60;//* localTimescale;
 
-        myController.Move(velocity);
+        myController.Move(velocity * Time.deltaTime * 60);// * localTimescale);
 
         velocity.Scale(friction);
-
-        if (controlType == ControlType.AI && hitStun > 0)
-        {
-            this._agent.velocity = this.myController.velocity;
-        }
 
         //transform.position += velocity;
 
@@ -361,14 +356,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             if (!aerialFlag)
             {
-                aerialTimer++;
+                aerialTimer += 60 * Time.deltaTime;
             }
             if (aerialTimer >= 3)
             {
                 aerialFlag = true;
                 if (aniAerialState <= 1f)
                 {
-                    aniAerialState += 0.1f; // 0.05 is 20 frames i think since 0.1 is 10
+                    aniAerialState += 0.1f * Time.deltaTime * 60; // 0.05 is 20 frames i think since 0.1 is 10
                 }
                 if (jumps == jumpMax) { jumps--; }
             }
@@ -407,7 +402,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         UpdateStateAttacks();
 
         prevStateTime = currentStateTime;
-        currentStateTime++;
+        currentStateTime += 60 * Time.deltaTime;
 
         if (currentStateTime >= myCurrentState.length)
         {
@@ -702,6 +697,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
         if (Input.GetButton("RB"))
         {
             targeting = true;
+            //localTimescale = 0.2f;
+            Time.timeScale = 0.2f;
         }
         else { targeting = false; }
 
@@ -973,7 +970,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public float hitStun;
     public void GettingHit()
     {
-        hitStun--;
+        hitStun -= Time.deltaTime * 60;
         if (hitStun <= 0) { EndState(); }
 
         // HACKY PLACE FOR PROTOTYPE MOVE THIS
