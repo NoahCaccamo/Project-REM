@@ -37,7 +37,7 @@ public class GameEngine : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (hitStop > 0) { hitStop--; }
+        if (hitStop > 0) { hitStop -= 60 * Time.deltaTime; }
     }
 
     public static void GlobalPrefab(int _index, GameObject _obj)

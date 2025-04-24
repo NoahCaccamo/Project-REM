@@ -161,7 +161,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         velDir *= 0.02f;
 
-        velocity += velDir;
+        velocity += velDir * Time.deltaTime * 60;
     }
 
     private void AttackPlayer()
@@ -191,10 +191,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 UpdateInput();
                 break;
         }
-    }
 
-    void FixedUpdate()
-    {
         if (GameEngine.hitStop <= 0)
         {
 
@@ -266,7 +263,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
             velHelp *= _val;
 
-            velocity += velHelp;
+            velocity += velHelp * Time.deltaTime * 60;
         }
     }
 
@@ -337,9 +334,13 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         velocity += gravity * Time.deltaTime * 60;//* localTimescale;
 
-        myController.Move(velocity * Time.deltaTime * 60);// * localTimescale);
+        myController.Move(velocity * 60 * Time.deltaTime);// * localTimescale);
 
-        velocity.Scale(friction);
+        velocity.x = Mathf.Lerp(velocity.x, 0, friction.x * Time.deltaTime * 60);
+        velocity.y = Mathf.Lerp(velocity.y, 0, friction.y * Time.deltaTime * 60);
+        velocity.z = Mathf.Lerp(velocity.z, 0, friction.z * Time.deltaTime * 60);
+
+
 
         //transform.position += velocity;
 
@@ -356,14 +357,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             if (!aerialFlag)
             {
-                aerialTimer += 60 * Time.deltaTime;
+                aerialTimer += Time.deltaTime * 60;
             }
             if (aerialTimer >= 3)
             {
                 aerialFlag = true;
                 if (aniAerialState <= 1f)
                 {
-                    aniAerialState += 0.1f * Time.deltaTime * 60; // 0.05 is 20 frames i think since 0.1 is 10
+                    aniAerialState += 0.1f * 60 *Time.deltaTime; // 0.05 is 20 frames i think since 0.1 is 10
                 }
                 if (jumps == jumpMax) { jumps--; }
             }
@@ -455,7 +456,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
         {
             // hitconfirm here with sepearate flag if we want to count attack hits rather than skill?
-            if (currentStateTime >= _atk.start && currentStateTime <= _atk.start + 1) // could do a greater catch window when manipulating timescale
+            if (currentStateTime >= _atk.start && prevStateTime < _atk.start) // could do a greater catch window when manipulating timescale
             {
                 hitActive = _atk.length;
                 hitbox.transform.localScale = _atk.hitboxScale;
@@ -554,7 +555,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
             Vector3 charLoc = character.transform.position;
             Vector3 enemyLoc = target.transform.position;
             Vector3 targetDir = (enemyLoc - charLoc).normalized;
-            velocity += targetDir * _pow;
+            velocity += targetDir * _pow * Time.deltaTime * 60;
 
             // TEMP TEST - removes player collision and enemy push
             character.gameObject.GetComponentInParent<CapsuleCollider>().excludeLayers = 128;
@@ -602,7 +603,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void FrontVelocity(float _pow)
     {
-        velocity += character.transform.forward * _pow;
+        velocity += character.transform.forward * _pow * Time.deltaTime * 60;
     }
 
     void StickMove(float _pow)
