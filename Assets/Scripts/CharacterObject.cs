@@ -466,7 +466,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
             // hitconfirm here with sepearate flag if we want to count attack hits rather than skill?
             if (currentStateTime >= _atk.start && prevStateTime < _atk.start) // could do a greater catch window when manipulating timescale
             {
-                hitActive = _atk.length;
+                _atk.hitActive = _atk.length;
                 hitbox.transform.localScale = _atk.hitboxScale;
                 hitbox.transform.localPosition = _atk.hitboxPos;
                 currentAttackIndex = _cur;
@@ -474,7 +474,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
             if (currentStateTime >= _atk.start + _atk.length)
             {
-                hitActive = 0;
+                _atk.hitActive = 0;
             }
 
             //HitCancel
@@ -490,6 +490,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
             }
             // end hitcancel
 
+            hitActive += _atk.hitActive;
             _cur++;
         }
     }
@@ -672,7 +673,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
             }
         }
 
-            SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
+        foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
+        {
+            _atk.hitActive = 0;
+        }
+
+        SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
         if (hitStun <= 0) { FaceStick(1); faceStick = false; }
 
@@ -922,6 +928,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // should be getter/setter instead of raw reset
         // does not take into acount multiple enemies rn
         attacker.hitActive = 0;
+        curAtk.hitActive = 0;
         //Vector3 targetOffset = transform.position
 
         if (currentState == 21) // HARDCODED 21 = parry

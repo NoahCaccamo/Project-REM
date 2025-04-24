@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class Hitbox : MonoBehaviour
@@ -26,7 +27,7 @@ public class Hitbox : MonoBehaviour
     {
         if (other.gameObject != transform.root.gameObject) // the root is where our character object script is
         {
-            if (character.hitActive > 0)
+            if (GameEngine.coreData.characterStates[character.currentState].attacks[character.currentAttackIndex].hitActive > 0)
             {
                 // slowwww
                 CharacterObject victim = other.transform.root.GetComponent<CharacterObject>();

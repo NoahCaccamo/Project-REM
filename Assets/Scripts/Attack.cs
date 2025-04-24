@@ -23,5 +23,7 @@ public class Attack
 
     public float playerBoost;
 
+    public float hitActive;
+
     public StatusEffectData statusData;
 }
