@@ -440,9 +440,17 @@ public class CharacterObject : MonoBehaviour, IEffectable
             // <= here might fire things twice on first frame?
             // theres a better way to do this
             //if (prevStateTime <= _ev.start && currentStateTime == _ev.start)
-            if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
+            if (!_ev.hasExecuted)
             {
-                DoEventScript(_ev.script, _ev.variable);
+                if (_ev.start == _ev.end && currentStateTime >= _ev.start)
+                {
+                    DoEventScript(_ev.script, _ev.variable);
+                    _ev.hasExecuted = true;
+                }
+                if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
+                {
+                    DoEventScript(_ev.script, _ev.variable);
+                }
             }
         }
     }
@@ -655,7 +663,16 @@ public class CharacterObject : MonoBehaviour, IEffectable
         hitActive = 0;
         hitConfirm = 0;
 
-        SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
+        // Reset oneshot event flags
+        foreach (StateEvent _ev in GameEngine.coreData.characterStates[currentState].events)
+        {
+            if (_ev.hasExecuted)
+            {
+                _ev.hasExecuted = false;
+            }
+        }
+
+            SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
         if (hitStun <= 0) { FaceStick(1); faceStick = false; }
 
