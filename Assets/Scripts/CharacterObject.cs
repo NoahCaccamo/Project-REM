@@ -67,6 +67,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     float localTimescale = 1f;
 
+    public GameObject bullet;
+
     void Start()
     {
         myController = GetComponent<CharacterController>();
@@ -337,6 +339,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void UpdatePhysics()
     {
+        if (noGrav <= 0)
+        {
+            velocity += gravity * Time.deltaTime * 60 * localTimescale;//* localTimescale;
+        }
+        myController.Move(velocity * 60 * Time.deltaTime * localTimescale);// * localTimescale);
 
         velocity.x = Mathf.Lerp(velocity.x, 0, friction.x * Time.deltaTime * 60 * localTimescale);
         velocity.y = Mathf.Lerp(velocity.y, 0, friction.y * Time.deltaTime * 60 * localTimescale);
@@ -422,6 +429,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
     void EndState()
     {
+        noGrav = 0;
+
         currentStateTime = 0;
         currentState = 0;
         prevStateTime = -1;
@@ -555,6 +564,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 11:
                 Invulnerable(_var);
                 break;
+            case 12:
+                HoldVelocity(_var);
+                break;
+            case 13:
+                Shoot(_var);
+                break;
         }
     }
 
@@ -645,6 +660,44 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // also increment time invulnerable and reset when state changes
         // this way perfect dodge can check if player was hit in the first few frames of a dodge
         else { invulnerable = false; }
+    }
+
+    float prevHold;
+    void HoldVelocity(float _val)
+    {
+        //playerInputBuffer.buffer[b].rawInputs[i].used
+        if (inputBuffer.buffer[24].rawInputs[1].hold >= _val && prevHold < _val)
+        {
+            velocity.y = 0.4f;
+        }
+
+        prevHold = inputBuffer.buffer[24].rawInputs[1].hold;
+    }
+
+    void Shoot(float _pow)
+    {
+        Vector3 direction;
+        Quaternion lookRotation = transform.rotation;
+        if (target)
+        {
+            direction = (target.transform.position - transform.position).normalized;
+            lookRotation = Quaternion.LookRotation(direction);
+        }
+        else if (softTarget)
+        {
+            direction = (softTarget.transform.position - transform.position).normalized;
+            lookRotation = Quaternion.LookRotation(direction);
+        }
+
+        if (Input.GetButtonDown("Slash2"))
+        {
+            Debug.Log("PEW");
+            GameObject newBullet = Instantiate(bullet, transform.position, lookRotation);
+            newBullet.GetComponent<Bullet>().lookDirection = lookRotation;
+            newBullet.GetComponent<Bullet>().character = this;
+
+            VelocityY(0.1f);
+        }
     }
 
     // This is the old Unity input system
@@ -998,10 +1051,42 @@ public class CharacterObject : MonoBehaviour, IEffectable
         GlobalPrefab(0); // more magic number
     }
 
+    public void GetShot(CharacterObject attacker)
+    {
+        if (invulnerable)
+        {
+            Time.timeScale = 0.15f;
+            attacker.localTimescale = 0.15f;
+            return;
+        }
+
+        hp--;
+        Debug.Log(hp);
+        VelocityY(0f);
+
+        // can += for little variants
+        // put variance on the one that is lower as an idea (e.g. if attack is primarily up and down keep it the same so main motion isnt lost, so lr variant)
+        targetHitAni.x += Random.Range(-0.1f, 0.1f);
+        targetHitAni.y += Random.Range(-0.1f, 0.1f);
+
+        currHitAni = targetHitAni * 0.7f; // multipy by target start position for hurt animation blending
+
+        FaceTarget(attacker.transform.position);
+
+        hitStun = 30;
+        noGrav = 23;
+
+        // uneeded sets in startstate currentState = 3; 
+        StartState(3); // magic number  hitstun state in coredata
+        GlobalPrefab(0); // more magic number
+    }
+
     public float hitStun;
+    public float noGrav;
     public void GettingHit()
     {
         hitStun -= Time.deltaTime * 60 * localTimescale;
+        noGrav -= Time.deltaTime * 60 * localTimescale;
         if (hitStun <= 0) { EndState(); }
 
         // HACKY PLACE FOR PROTOTYPE MOVE THIS
