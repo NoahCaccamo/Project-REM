@@ -65,11 +65,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public LayerMask whatIsPlayer;
 
+    float localTimescale = 1f;
 
     void Start()
     {
         myController = GetComponent<CharacterController>();
         // myAnimator = GetComponent<Animator>();
+
+        Time.timeScale = 0.2f;
     }
 
     // INVENTORY STUFF
@@ -161,7 +164,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         velDir *= 0.02f;
 
-        velocity += velDir * Time.deltaTime * 60;
+        velocity += velDir * Time.deltaTime * 60 * localTimescale;
     }
 
     private void AttackPlayer()
@@ -215,14 +218,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void UpdateTimers()
     {
-        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime; }
+        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime * localTimescale; }
     }
 
     public float aniMoveSpeed;
     public float aniSpeed;
     void UpdateAnimation()
     {
-        aniSpeed = 1;
+        aniSpeed = localTimescale;
 
         if (GameEngine.hitStop > 0) { aniSpeed = 0; }
         Vector3 latspeed = new Vector3(velocity.x, 0, velocity.z);
@@ -263,7 +266,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
             velHelp *= _val;
 
-            velocity += velHelp * Time.deltaTime * 60;
+            velocity += velHelp * Time.deltaTime * 60 * localTimescale;
         }
     }
 
@@ -329,16 +332,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
         velocity.y += 1f;
     }
 
+    [SerializeField] float frictionAmount = 0.1f; // adjust as needed
+
+
     void UpdatePhysics()
     {
 
-        velocity += gravity * Time.deltaTime * 60;//* localTimescale;
-
-        myController.Move(velocity * 60 * Time.deltaTime);// * localTimescale);
-
-        velocity.x = Mathf.Lerp(velocity.x, 0, friction.x * Time.deltaTime * 60);
-        velocity.y = Mathf.Lerp(velocity.y, 0, friction.y * Time.deltaTime * 60);
-        velocity.z = Mathf.Lerp(velocity.z, 0, friction.z * Time.deltaTime * 60);
+        velocity.x = Mathf.Lerp(velocity.x, 0, friction.x * Time.deltaTime * 60 * localTimescale);
+        velocity.y = Mathf.Lerp(velocity.y, 0, friction.y * Time.deltaTime * 60 * localTimescale);
+        velocity.z = Mathf.Lerp(velocity.z, 0, friction.z * Time.deltaTime * 60 * localTimescale);
 
 
 
@@ -357,14 +359,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             if (!aerialFlag)
             {
-                aerialTimer += Time.deltaTime * 60;
+                aerialTimer += Time.deltaTime * 60 * localTimescale;
             }
             if (aerialTimer >= 3)
             {
                 aerialFlag = true;
                 if (aniAerialState <= 1f)
                 {
-                    aniAerialState += 0.1f * 60 *Time.deltaTime; // 0.05 is 20 frames i think since 0.1 is 10
+                    aniAerialState += 0.1f * 60 * Time.deltaTime * localTimescale; // 0.05 is 20 frames i think since 0.1 is 10
                 }
                 if (jumps == jumpMax) { jumps--; }
             }
@@ -403,7 +405,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         UpdateStateAttacks();
 
         prevStateTime = currentStateTime;
-        currentStateTime += 60 * Time.deltaTime;
+        currentStateTime += 60 * Time.deltaTime * localTimescale;
 
         if (currentStateTime >= myCurrentState.length)
         {
@@ -461,6 +463,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void UpdateStateAttacks()
     {
         int _cur = 0;
+        hitActive = 0;
         foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
         {
             // hitconfirm here with sepearate flag if we want to count attack hits rather than skill?
@@ -564,7 +567,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
             Vector3 charLoc = character.transform.position;
             Vector3 enemyLoc = target.transform.position;
             Vector3 targetDir = (enemyLoc - charLoc).normalized;
-            velocity += targetDir * _pow * Time.deltaTime * 60;
+            velocity += targetDir * _pow * Time.deltaTime * 60 * localTimescale;
 
             // TEMP TEST - removes player collision and enemy push
             character.gameObject.GetComponentInParent<CapsuleCollider>().excludeLayers = 128;
@@ -612,7 +615,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void FrontVelocity(float _pow)
     {
-        velocity += character.transform.forward * _pow * Time.deltaTime * 60;
+        velocity += character.transform.forward * _pow * Time.deltaTime * 60 * localTimescale;
     }
 
     void StickMove(float _pow)
@@ -657,6 +660,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         currentStateTime = 0;
         canCancel = false;
         invulnerable = false;
+        prevHold = 0;
 
         faceStick = false;
 
@@ -722,7 +726,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             targeting = true;
             //localTimescale = 0.2f;
-            Time.timeScale = 0.2f;
+            //Time.timeScale = 0.2f;
         }
         else { targeting = false; }
 
@@ -920,6 +924,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         if (invulnerable)
         {
+            Time.timeScale = 0.15f;
+            attacker.localTimescale = 0.15f;
             return;
         }
 
@@ -995,7 +1001,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public float hitStun;
     public void GettingHit()
     {
-        hitStun -= Time.deltaTime * 60;
+        hitStun -= Time.deltaTime * 60 * localTimescale;
         if (hitStun <= 0) { EndState(); }
 
         // HACKY PLACE FOR PROTOTYPE MOVE THIS

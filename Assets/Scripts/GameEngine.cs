@@ -38,6 +38,7 @@ public class GameEngine : MonoBehaviour
     void Update()
     {
         if (hitStop > 0) { hitStop -= 60 * Time.deltaTime; }
+        if (Time.timeScale < 1f) { Time.timeScale += 0.01f; }
     }
 
     public static void GlobalPrefab(int _index, GameObject _obj)

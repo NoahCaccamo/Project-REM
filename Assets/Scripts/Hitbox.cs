@@ -27,12 +27,15 @@ public class Hitbox : MonoBehaviour
     {
         if (other.gameObject != transform.root.gameObject) // the root is where our character object script is
         {
-            if (GameEngine.coreData.characterStates[character.currentState].attacks[character.currentAttackIndex].hitActive > 0)
+            if (character.hitActive > 0)
             {
-                // slowwww
-                CharacterObject victim = other.transform.root.GetComponent<CharacterObject>();
-                victim.GetHit(character);
-                Debug.Log("HIT!");
+                if (GameEngine.coreData.characterStates[character.currentState].attacks[character.currentAttackIndex].hitActive > 0)
+                {
+                    // slowwww
+                    CharacterObject victim = other.transform.root.GetComponent<CharacterObject>();
+                    victim.GetHit(character);
+                    Debug.Log("HIT!");
+                }
             }
         }
     }
