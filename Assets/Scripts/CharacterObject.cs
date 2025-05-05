@@ -69,6 +69,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public GameObject bullet;
 
+
+    // TEMP FOR TESTING
+    public RoomManager roomManager;
+
     void Start()
     {
         myController = GetComponent<CharacterController>();
@@ -1044,6 +1048,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
             nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
             nextKnockback.y = 1.5f;
             SetVelocity(nextKnockback);
+
+            if (controlType == ControlType.AI)
+            {
+                roomManager.KilledOponent(this.gameObject);
+            }
         }
 
         // uneeded sets in startstate currentState = 3; 
