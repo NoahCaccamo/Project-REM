@@ -98,6 +98,10 @@ public class GameEngine : MonoBehaviour
             GUI.Label(new Rect(500f - 25f, m * ySpace, 100, 20), playerInputBuffer.motionCommandCheck[m].ToString());
             GUI.Label(new Rect(500f, m * ySpace, 100, 20), coreData.motionCommands[m].name);
         }
+
+        // HP AND OVERCLOCK
+        GUI.Label(new Rect(200f, 15f, 90, 20), "HP: " + mainCharacter.hp.ToString());
+        GUI.Label(new Rect(200f, 30f, 90, 20), "OC: " + mainCharacter.specialMeter.ToString());
     }
     /* TEMP COMMENT OUT INPUT BUFFER DISPLAY
     private void OnGUI()

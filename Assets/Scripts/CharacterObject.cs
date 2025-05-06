@@ -16,7 +16,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public InventoryObject inventory;
 
-    public int hp = 10;
+    public float hp = 10f;
 
     public Vector3 velocity;
 
@@ -68,7 +68,9 @@ public class CharacterObject : MonoBehaviour, IEffectable
     float localTimescale = 1f;
 
     public GameObject bullet;
-
+    public GameObject enemyDrop;
+    public bool overclocked = false;
+    public float overclockDrainRate = 0.1f;
 
     // TEMP FOR TESTING
     public RoomManager roomManager;
@@ -77,8 +79,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         myController = GetComponent<CharacterController>();
         // myAnimator = GetComponent<Animator>();
-
-        Time.timeScale = 0.2f;
     }
 
     // INVENTORY STUFF
@@ -225,6 +225,23 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void UpdateTimers()
     {
         if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime * localTimescale; }
+        if (overclocked)
+        {
+            if (specialMeter > 0)
+            {
+                ChangeMeter(-overclockDrainRate * 60 * Time.deltaTime);
+                localTimescale = 2f;
+                if (hp < 20)
+                {
+                    hp += (overclockDrainRate * 0.02f) * 60 * Time.deltaTime;
+                }
+            }
+            else
+            {
+                localTimescale = 1f;
+                overclocked = false;
+            }
+        }
     }
 
     public float aniMoveSpeed;
@@ -324,6 +341,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public void BuildMeter(float _val)
     {
+        if (overclocked)
+        {
+            return;
+        }
         ChangeMeter(_val);
     }
 
@@ -337,9 +358,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         velocity.y += 1f;
     }
-
-    [SerializeField] float frictionAmount = 0.1f; // adjust as needed
-
 
     void UpdatePhysics()
     {
@@ -443,7 +461,20 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // DESTROY AFTER HITSTUN IS DONE HACKY
         if (hp <= 0)
         {
-            Destroy(this.gameObject);
+            if (controlType == ControlType.AI)
+            {
+                // Get a random position (box), then spawn the drop
+                int numDrops = Random.Range(3, 10);
+                for (int i = 0; i < numDrops; i++)
+                {
+                    Vector3 minPos = new Vector3(-1, -1, -1);
+                    Vector3 maxPos = new Vector3(1, 1, 1);
+                    Vector3 randomPos = new Vector3(Random.Range(minPos.x, maxPos.x), Random.Range(minPos.y, maxPos.y), Random.Range(minPos.z, maxPos.z));
+                    Instantiate(enemyDrop, transform.position + randomPos, transform.rotation);
+                }
+                Destroy(this.gameObject);
+            }
+            
         }
     }
 
@@ -792,6 +823,22 @@ public class CharacterObject : MonoBehaviour, IEffectable
             target = TargetClosestEnemy();
         }
 
+        if (Input.GetButtonUp("LB"))
+        {
+            if (overclocked)
+            {
+                overclocked = false;
+                localTimescale = 1f;
+            }
+            else
+            {
+                if (specialMeter >= 50)
+                {
+                    overclocked = true;
+                }
+            }
+        }
+
         inputBuffer.Update();
 
         bool startState = false;
@@ -1027,7 +1074,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         hitStun = curAtk.hitstun;
         attacker.hitConfirm += 1;
-        attacker.BuildMeter(10f);
+        // attacker.BuildMeter(10f);
 
         if (curAtk.playerBoost != 0)
         {
@@ -1044,13 +1091,13 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // hacky death check in wrong place and should be its own state
         if (hp <= 0)
         {
-            hitStun = 60;
-            nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
-            nextKnockback.y = 1.5f;
-            SetVelocity(nextKnockback);
-
             if (controlType == ControlType.AI)
             {
+                hitStun = 60;
+                nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
+                nextKnockback.y = 1.5f;
+                SetVelocity(nextKnockback);
+
                 roomManager.KilledOponent(this.gameObject);
             }
         }
@@ -1157,4 +1204,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (currentEffectTime >= _data.Lifetime) RemoveEffect();
     }
+
+    public void Collect(float _amnt)
+    {
+        BuildMeter(_amnt);
+    }
+
 }
