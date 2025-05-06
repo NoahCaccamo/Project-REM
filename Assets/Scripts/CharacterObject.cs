@@ -74,6 +74,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     // TEMP FOR TESTING
     public RoomManager roomManager;
+    public Camera minigameCam;
 
     void Start()
     {
@@ -475,6 +476,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 Destroy(this.gameObject);
             }
             
+            // GO TO WACKY GAME IF DEAD
+            if (controlType == ControlType.PLAYER)
+            {
+                //Camera.main.enabled = false;
+                minigameCam.gameObject.SetActive(true);
+                minigameCam.enabled = true;
+                Time.timeScale = 0;
+            }
         }
     }
 
@@ -1210,4 +1219,22 @@ public class CharacterObject : MonoBehaviour, IEffectable
         BuildMeter(_amnt);
     }
 
+    public void MinigameFail()
+    {
+//Camera.main.enabled = true;
+        minigameCam.enabled = false;
+        minigameCam.gameObject.SetActive(false);
+        Destroy(gameObject);
+    }
+
+    public void MinigameSuccess()
+    {
+        //Camera.main.enabled = true;
+        minigameCam.enabled = false;
+        minigameCam.gameObject.SetActive(false);
+        hp = 5;
+        Time.timeScale = 1;
+
+        // get off me attack
+    }
 }
