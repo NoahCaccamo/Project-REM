@@ -25,13 +25,19 @@ public class MinigameManager : MonoBehaviour
         timer += Time.unscaledDeltaTime * 60;
         if (timer >= spawnInterval)
         {
+            float yOffset = 0;
+            float posRoll = Random.Range(0, 1f);
+            if (posRoll > 0.5f)
+            {
+                yOffset = 2f;
+            }
             if (obstacleCount >= obstaclesToGoal)
             {
-                Instantiate(goal, transform.position, transform.rotation);
+                Instantiate(goal, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), transform.rotation);
                 obstacleCount = 0;
             } else
             {
-                Instantiate(obstacle, transform.position, transform.rotation);
+                Instantiate(obstacle, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), transform.rotation);
                 obstacleCount++;
             }
             spawnInterval = Random.Range(30f, 60f);
