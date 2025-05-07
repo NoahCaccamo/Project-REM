@@ -5,6 +5,7 @@ public class Collectable : MonoBehaviour
 
     CharacterObject player;
     public float amount = 5f;
+    bool isCollected = false;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -19,11 +20,12 @@ public class Collectable : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.name == "Player")
+        if (other.name == "Player" && !isCollected)
         {
+            isCollected = true;
             player = other.GetComponent<CharacterObject>();
             player.Collect(amount);
-            Destroy(transform.parent.gameObject);
+            Destroy(transform.parent.gameObject, 0.5f);
         }
     }
 }
