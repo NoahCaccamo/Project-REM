@@ -67,6 +67,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   amount: 5
+  particleSystem: {fileID: 7603270617258070954}
 --- !u!1 &1502544426538167878
 GameObject:
   m_ObjectHideFlags: 0
@@ -5025,4 +5026,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 10
-  trail: {fileID: 1502544426538167878}
