@@ -781,7 +781,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
-        if (hitStun <= 0) { FaceStick(1); faceStick = false; }
+        if (hitStun <= 0 && !targeting ) { FaceStick(1); faceStick = false; }
 
         if (softTarget)
         {
