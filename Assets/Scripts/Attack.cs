@@ -22,4 +22,8 @@ public class Attack
     public float cancelWindow;
 
     public float playerBoost;
+
+    public float hitActive;
+
+    public StatusEffectData statusData;
 }

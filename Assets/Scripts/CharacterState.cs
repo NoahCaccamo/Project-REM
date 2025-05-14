@@ -66,6 +66,8 @@ public class StateEvent
     [IndexedItem(IndexedItemAttribute.IndexedItemType.SCRIPTS)]
     public int script;
 
+    public bool hasExecuted;
+
     // list of scriptParameters here
 }
 

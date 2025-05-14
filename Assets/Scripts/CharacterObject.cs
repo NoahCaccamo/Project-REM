@@ -10,11 +10,13 @@ using static InputBuffer;
 
 // https://youtu.be/zAIdyNDBe0A?si=7HMFTwJ7_uMWFrty&t=1758
 
-public class CharacterObject : MonoBehaviour
+public class CharacterObject : MonoBehaviour, IEffectable
 {
+    public StatusEffectData _data;
+
     public InventoryObject inventory;
 
-    public int hp = 10;
+    public float hp = 10f;
 
     public Vector3 velocity;
 
@@ -46,6 +48,7 @@ public class CharacterObject : MonoBehaviour
 
     public bool targeting = false;
     public GameObject target;
+    public GameObject softTarget = null;
 
     public bool wallrunning = false;
 
@@ -62,15 +65,20 @@ public class CharacterObject : MonoBehaviour
 
     public LayerMask whatIsPlayer;
 
+    float localTimescale = 1f;
+
+    public GameObject bullet;
+    public GameObject enemyDrop;
+    public bool overclocked = false;
+    public float overclockDrainRate = 0.1f;
+
+    // TEMP FOR TESTING
+    public RoomManager roomManager;
+    public Camera minigameCam;
 
     void Start()
     {
         myController = GetComponent<CharacterController>();
-        if (controlType == ControlType.AI)
-        {
-            this._agent = this.gameObject.GetComponent<NavMeshAgent>();
-            this._agent.destination = this._playerTrans.position;
-        }
         // myAnimator = GetComponent<Animator>();
     }
 
@@ -163,7 +171,7 @@ public class CharacterObject : MonoBehaviour
 
         velDir *= 0.02f;
 
-        velocity += velDir;
+        velocity += velDir * Time.deltaTime * 60 * localTimescale;
     }
 
     private void AttackPlayer()
@@ -183,22 +191,24 @@ public class CharacterObject : MonoBehaviour
 
     void Update()
     {
+        switch (controlType)
+        {
+            case ControlType.AI:
+                UpdateAI();
+                break;
+
+            case ControlType.PLAYER:
+                UpdateInput();
+                break;
+        }
+
         if (GameEngine.hitStop <= 0)
         {
+
+            softTarget = TargetClosestEnemy();
             // UpdateInputBuffer
 
             // Update Input
-            
-            switch (controlType)
-            {
-                case ControlType.AI:
-                    UpdateAI();
-                    break;
-
-                case ControlType.PLAYER:
-                    UpdateInput();
-                    break;
-            }
             
 
             // Update State Machine
@@ -207,6 +217,7 @@ public class CharacterObject : MonoBehaviour
             // Update physics
             UpdatePhysics();
 
+            if (_data != null) HandleEffect();
         }
         UpdateTimers();
         UpdateAnimation();
@@ -214,14 +225,31 @@ public class CharacterObject : MonoBehaviour
 
     void UpdateTimers()
     {
-        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate; }
+        if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime * localTimescale; }
+        if (overclocked)
+        {
+            if (specialMeter > 0)
+            {
+                ChangeMeter(-overclockDrainRate * 60 * Time.deltaTime);
+                localTimescale = 2f;
+                if (hp < 20)
+                {
+                    hp += (overclockDrainRate * 0.02f) * 60 * Time.deltaTime;
+                }
+            }
+            else
+            {
+                localTimescale = 1f;
+                overclocked = false;
+            }
+        }
     }
 
     public float aniMoveSpeed;
     public float aniSpeed;
     void UpdateAnimation()
     {
-        aniSpeed = 1;
+        aniSpeed = localTimescale;
 
         if (GameEngine.hitStop > 0) { aniSpeed = 0; }
         Vector3 latspeed = new Vector3(velocity.x, 0, velocity.z);
@@ -262,7 +290,7 @@ public class CharacterObject : MonoBehaviour
 
             velHelp *= _val;
 
-            velocity += velHelp;
+            velocity += velHelp * Time.deltaTime * 60 * localTimescale;
         }
     }
 
@@ -314,6 +342,10 @@ public class CharacterObject : MonoBehaviour
 
     public void BuildMeter(float _val)
     {
+        if (overclocked)
+        {
+            return;
+        }
         ChangeMeter(_val);
     }
 
@@ -330,17 +362,17 @@ public class CharacterObject : MonoBehaviour
 
     void UpdatePhysics()
     {
-
-        velocity += gravity;
-
-        myController.Move(velocity);
-
-        velocity.Scale(friction);
-
-        if (controlType == ControlType.AI && hitStun > 0)
+        if (noGrav <= 0)
         {
-            this._agent.velocity = this.myController.velocity;
+            velocity += gravity * Time.deltaTime * 60 * localTimescale;//* localTimescale;
         }
+        myController.Move(velocity * 60 * Time.deltaTime * localTimescale);// * localTimescale);
+
+        velocity.x = Mathf.Lerp(velocity.x, 0, friction.x * Time.deltaTime * 60 * localTimescale);
+        velocity.y = Mathf.Lerp(velocity.y, 0, friction.y * Time.deltaTime * 60 * localTimescale);
+        velocity.z = Mathf.Lerp(velocity.z, 0, friction.z * Time.deltaTime * 60 * localTimescale);
+
+
 
         //transform.position += velocity;
 
@@ -357,19 +389,20 @@ public class CharacterObject : MonoBehaviour
         {
             if (!aerialFlag)
             {
-                aerialTimer++;
+                aerialTimer += Time.deltaTime * 60 * localTimescale;
             }
             if (aerialTimer >= 3)
             {
                 aerialFlag = true;
                 if (aniAerialState <= 1f)
                 {
-                    aniAerialState += 0.1f; // 0.05 is 20 frames i think since 0.1 is 10
+                    aniAerialState += 0.1f * 60 * Time.deltaTime * localTimescale; // 0.05 is 20 frames i think since 0.1 is 10
                 }
                 if (jumps == jumpMax) { jumps--; }
             }
         }
 
+        // this is bad and ruins launchers. make event work with dash better
         if (hitStun <= 0)
         {
             if (faceStick)
@@ -402,7 +435,7 @@ public class CharacterObject : MonoBehaviour
         UpdateStateAttacks();
 
         prevStateTime = currentStateTime;
-        currentStateTime++;
+        currentStateTime += 60 * Time.deltaTime * localTimescale;
 
         if (currentStateTime >= myCurrentState.length)
         {
@@ -419,6 +452,8 @@ public class CharacterObject : MonoBehaviour
     }
     void EndState()
     {
+        noGrav = 0;
+
         currentStateTime = 0;
         currentState = 0;
         prevStateTime = -1;
@@ -427,7 +462,28 @@ public class CharacterObject : MonoBehaviour
         // DESTROY AFTER HITSTUN IS DONE HACKY
         if (hp <= 0)
         {
-            Destroy(this.gameObject);
+            if (controlType == ControlType.AI)
+            {
+                // Get a random position (box), then spawn the drop
+                int numDrops = Random.Range(3, 10);
+                for (int i = 0; i < numDrops; i++)
+                {
+                    Vector3 minPos = new Vector3(-1, -1, -1);
+                    Vector3 maxPos = new Vector3(1, 1, 1);
+                    Vector3 randomPos = new Vector3(Random.Range(minPos.x, maxPos.x), Random.Range(minPos.y, maxPos.y), Random.Range(minPos.z, maxPos.z));
+                    Instantiate(enemyDrop, transform.position + randomPos, transform.rotation);
+                }
+                Destroy(this.gameObject);
+            }
+            
+            // GO TO WACKY GAME IF DEAD
+            if (controlType == ControlType.PLAYER)
+            {
+                //Camera.main.enabled = false;
+                minigameCam.gameObject.SetActive(true);
+                minigameCam.enabled = true;
+                Time.timeScale = 0;
+            }
         }
     }
 
@@ -439,9 +495,17 @@ public class CharacterObject : MonoBehaviour
             // <= here might fire things twice on first frame?
             // theres a better way to do this
             //if (prevStateTime <= _ev.start && currentStateTime == _ev.start)
-            if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
+            if (!_ev.hasExecuted)
             {
-                DoEventScript(_ev.script, _ev.variable);
+                if (_ev.start == _ev.end && currentStateTime >= _ev.start)
+                {
+                    DoEventScript(_ev.script, _ev.variable);
+                    _ev.hasExecuted = true;
+                }
+                if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
+                {
+                    DoEventScript(_ev.script, _ev.variable);
+                }
             }
         }
     }
@@ -452,20 +516,21 @@ public class CharacterObject : MonoBehaviour
     void UpdateStateAttacks()
     {
         int _cur = 0;
+        hitActive = 0;
         foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
         {
             // hitconfirm here with sepearate flag if we want to count attack hits rather than skill?
-            if (currentStateTime == _atk.start) // could do a greater catch window when manipulating timescale
+            if (currentStateTime >= _atk.start && prevStateTime < _atk.start) // could do a greater catch window when manipulating timescale
             {
-                hitActive = _atk.length;
+                _atk.hitActive = _atk.length;
                 hitbox.transform.localScale = _atk.hitboxScale;
                 hitbox.transform.localPosition = _atk.hitboxPos;
                 currentAttackIndex = _cur;
             }
 
-            if (currentStateTime == _atk.start + _atk.length)
+            if (currentStateTime >= _atk.start + _atk.length)
             {
-                hitActive = 0;
+                _atk.hitActive = 0;
             }
 
             //HitCancel
@@ -481,6 +546,7 @@ public class CharacterObject : MonoBehaviour
             }
             // end hitcancel
 
+            hitActive += _atk.hitActive;
             _cur++;
         }
     }
@@ -542,19 +608,25 @@ public class CharacterObject : MonoBehaviour
             case 11:
                 Invulnerable(_var);
                 break;
+            case 12:
+                HoldVelocity(_var);
+                break;
+            case 13:
+                Shoot(_var);
+                break;
         }
     }
 
     void VelocityToTarget(float _pow)
     {
-        TargetClosestEnemy();
+        target = TargetClosestEnemy();
         if (target)
         {
             Debug.Log("zoomin");
             Vector3 charLoc = character.transform.position;
             Vector3 enemyLoc = target.transform.position;
             Vector3 targetDir = (enemyLoc - charLoc).normalized;
-            velocity += targetDir * _pow;
+            velocity += targetDir * _pow * Time.deltaTime * 60 * localTimescale;
 
             // TEMP TEST - removes player collision and enemy push
             character.gameObject.GetComponentInParent<CapsuleCollider>().excludeLayers = 128;
@@ -602,7 +674,7 @@ public class CharacterObject : MonoBehaviour
 
     void FrontVelocity(float _pow)
     {
-        velocity += character.transform.forward * _pow;
+        velocity += character.transform.forward * _pow * Time.deltaTime * 60 * localTimescale;
     }
 
     void StickMove(float _pow)
@@ -634,6 +706,44 @@ public class CharacterObject : MonoBehaviour
         else { invulnerable = false; }
     }
 
+    float prevHold;
+    void HoldVelocity(float _val)
+    {
+        //playerInputBuffer.buffer[b].rawInputs[i].used
+        if (inputBuffer.buffer[24].rawInputs[1].hold >= _val && prevHold < _val)
+        {
+            velocity.y = 0.4f;
+        }
+
+        prevHold = inputBuffer.buffer[24].rawInputs[1].hold;
+    }
+
+    void Shoot(float _pow)
+    {
+        Vector3 direction;
+        Quaternion lookRotation = transform.rotation;
+        if (target)
+        {
+            direction = (target.transform.position - transform.position).normalized;
+            lookRotation = Quaternion.LookRotation(direction);
+        }
+        else if (softTarget)
+        {
+            direction = (softTarget.transform.position - transform.position).normalized;
+            lookRotation = Quaternion.LookRotation(direction);
+        }
+
+        if (Input.GetButtonDown("Slash2"))
+        {
+            Debug.Log("PEW");
+            GameObject newBullet = Instantiate(bullet, transform.position, lookRotation);
+            newBullet.GetComponent<Bullet>().lookDirection = lookRotation;
+            newBullet.GetComponent<Bullet>().character = this;
+
+            VelocityY(0.1f);
+        }
+    }
+
     // This is the old Unity input system
     public float deadzone = 0.2f;
 
@@ -647,6 +757,7 @@ public class CharacterObject : MonoBehaviour
         currentStateTime = 0;
         canCancel = false;
         invulnerable = false;
+        prevHold = 0;
 
         faceStick = false;
 
@@ -654,9 +765,29 @@ public class CharacterObject : MonoBehaviour
         hitActive = 0;
         hitConfirm = 0;
 
+        // Reset oneshot event flags
+        foreach (StateEvent _ev in GameEngine.coreData.characterStates[currentState].events)
+        {
+            if (_ev.hasExecuted)
+            {
+                _ev.hasExecuted = false;
+            }
+        }
+
+        foreach (Attack _atk in GameEngine.coreData.characterStates[currentState].attacks)
+        {
+            _atk.hitActive = 0;
+        }
+
         SetAnimation(GameEngine.coreData.characterStates[currentState].stateName);
 
-        if (hitStun <= 0) { FaceStick(1); faceStick = false; }
+        if (hitStun <= 0 && !targeting ) { FaceStick(1); faceStick = false; }
+
+        if (softTarget)
+        {
+            FaceTarget(softTarget.gameObject.transform.position);
+            faceStick = false;
+        }
     }
 
     void SetAnimation(string aniName)
@@ -691,12 +822,30 @@ public class CharacterObject : MonoBehaviour
         if (Input.GetButton("RB"))
         {
             targeting = true;
+            //localTimescale = 0.2f;
+            //Time.timeScale = 0.2f;
         }
         else { targeting = false; }
 
         if (Input.GetButtonDown("RB")) 
         {
-            TargetClosestEnemy();
+            target = TargetClosestEnemy();
+        }
+
+        if (Input.GetButtonUp("LB"))
+        {
+            if (overclocked)
+            {
+                overclocked = false;
+                localTimescale = 1f;
+            }
+            else
+            {
+                if (specialMeter >= 50)
+                {
+                    overclocked = true;
+                }
+            }
         }
 
         inputBuffer.Update();
@@ -848,12 +997,14 @@ public class CharacterObject : MonoBehaviour
         velocity = v;
     }
 
-    public void TargetClosestEnemy()
+    public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
         Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, 128);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
+
+        GameObject _target = null;
 
         foreach (Collider hitEnemy in hitEnemies)
         {
@@ -868,13 +1019,15 @@ public class CharacterObject : MonoBehaviour
 
         if (closestEnemy)
         {
-            target = closestEnemy;
+            _target = closestEnemy;
         }
         else
         {
-            target = null;
+            _target = null;
         }
 
+
+        return _target;
     }
 
 
@@ -884,6 +1037,8 @@ public class CharacterObject : MonoBehaviour
     {
         if (invulnerable)
         {
+            Time.timeScale = 0.15f;
+            attacker.localTimescale = 0.15f;
             return;
         }
 
@@ -892,6 +1047,7 @@ public class CharacterObject : MonoBehaviour
         // should be getter/setter instead of raw reset
         // does not take into acount multiple enemies rn
         attacker.hitActive = 0;
+        curAtk.hitActive = 0;
         //Vector3 targetOffset = transform.position
 
         if (currentState == 21) // HARDCODED 21 = parry
@@ -927,21 +1083,32 @@ public class CharacterObject : MonoBehaviour
 
         hitStun = curAtk.hitstun;
         attacker.hitConfirm += 1;
-        attacker.BuildMeter(10f);
+        // attacker.BuildMeter(10f);
 
         if (curAtk.playerBoost != 0)
         {
             attacker.VelocityY(curAtk.playerBoost);
         }
 
+        // Status Effects
+        if (curAtk.statusData)
+        {
+            ApplyEffect(curAtk.statusData);
+        }
+
 
         // hacky death check in wrong place and should be its own state
         if (hp <= 0)
         {
-            hitStun = 60;
-            nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
-            nextKnockback.y = 1.5f;
-            SetVelocity(nextKnockback);
+            if (controlType == ControlType.AI)
+            {
+                hitStun = 60;
+                nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
+                nextKnockback.y = 1.5f;
+                SetVelocity(nextKnockback);
+
+                roomManager.KilledOponent(this.gameObject);
+            }
         }
 
         // uneeded sets in startstate currentState = 3; 
@@ -949,10 +1116,42 @@ public class CharacterObject : MonoBehaviour
         GlobalPrefab(0); // more magic number
     }
 
+    public void GetShot(CharacterObject attacker)
+    {
+        if (invulnerable)
+        {
+            Time.timeScale = 0.15f;
+            attacker.localTimescale = 0.15f;
+            return;
+        }
+
+        hp--;
+        Debug.Log(hp);
+        VelocityY(0f);
+
+        // can += for little variants
+        // put variance on the one that is lower as an idea (e.g. if attack is primarily up and down keep it the same so main motion isnt lost, so lr variant)
+        targetHitAni.x += Random.Range(-0.1f, 0.1f);
+        targetHitAni.y += Random.Range(-0.1f, 0.1f);
+
+        currHitAni = targetHitAni * 0.7f; // multipy by target start position for hurt animation blending
+
+        FaceTarget(attacker.transform.position);
+
+        hitStun = 30;
+        noGrav = 23;
+
+        // uneeded sets in startstate currentState = 3; 
+        StartState(3); // magic number  hitstun state in coredata
+        GlobalPrefab(0); // more magic number
+    }
+
     public float hitStun;
+    public float noGrav;
     public void GettingHit()
     {
-        hitStun--;
+        hitStun -= Time.deltaTime * 60 * localTimescale;
+        noGrav -= Time.deltaTime * 60 * localTimescale;
         if (hitStun <= 0) { EndState(); }
 
         // HACKY PLACE FOR PROTOTYPE MOVE THIS
@@ -988,5 +1187,54 @@ public class CharacterObject : MonoBehaviour
         }
 
         return false;
+    }
+
+    private GameObject _effectIcon;
+    public void ApplyEffect(StatusEffectData _data)
+    {
+        RemoveEffect();
+        this._data = _data;
+        _effectIcon = Instantiate(_data.EffectIcon, transform);
+
+    }
+
+    public void RemoveEffect()
+    {
+        _data = null;
+        currentEffectTime = 0;
+        if (_effectIcon != null) { Destroy(_effectIcon); }
+    }
+
+    private float currentEffectTime = 0f;
+    private float lastTickTime = 0f;
+    public void HandleEffect()
+    {
+        currentEffectTime += 1; //or delta later
+
+        if (currentEffectTime >= _data.Lifetime) RemoveEffect();
+    }
+
+    public void Collect(float _amnt)
+    {
+        BuildMeter(_amnt);
+    }
+
+    public void MinigameFail()
+    {
+//Camera.main.enabled = true;
+        minigameCam.enabled = false;
+        minigameCam.gameObject.SetActive(false);
+        Destroy(gameObject);
+    }
+
+    public void MinigameSuccess()
+    {
+        //Camera.main.enabled = true;
+        minigameCam.enabled = false;
+        minigameCam.gameObject.SetActive(false);
+        hp = 5;
+        Time.timeScale = 1;
+
+        // get off me attack
     }
 }

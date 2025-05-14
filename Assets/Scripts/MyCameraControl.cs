@@ -55,7 +55,7 @@ public class MyCameraControl : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
         //transformTarget = getmaincharobject
 
