@@ -52,6 +52,12 @@ public class HairWindController : MonoBehaviour
         UpdatePlayerVelocityAndRotation();
 
         float time = Time.time;
+
+        // Meter visibility
+        int totalSegments = hairBones.Length;
+        float meterPercent = Mathf.Clamp01(playerRoot.gameObject.GetComponent<CharacterObject>().specialMeter / 100f);
+        float visibleSegmentsFloat = meterPercent * totalSegments;
+
         for (int i = 0; i < hairBones.Length; i++)
         {
             float offset = i / (float)hairBones.Length;
@@ -88,6 +94,22 @@ public class HairWindController : MonoBehaviour
             hairBones[i].enableWind = true;
             hairBones[i].windDirection = smoothedMotion.normalized;
             hairBones[i].windStrength = smoothedMotion.magnitude;
+
+
+            // Determine visibility
+            float fade = Mathf.Clamp01((visibleSegmentsFloat - i)); // 1 if fully visible, 0 if fully faded
+            fade = Mathf.SmoothStep(0, 1, fade); // Optional: smoother transition
+
+            // Apply to material color
+            SetBoneAlpha(hairBones[i], fade);
+
+            /*
+            if (alpha < 0.01f)
+            {
+                hairBones[i].enableWind = false;
+                // Optional: hairBones[i].gameObject.SetActive(false);
+            }
+            */
         }
 
     }
@@ -118,6 +140,17 @@ public class HairWindController : MonoBehaviour
         rotationalVelocity = Vector3.up * (angleRadians / Time.deltaTime); // Only yaw for now
 
         lastPlayerRotation = currentRotation;
+    }
+
+    void SetBoneAlpha(HairBone bone, float alpha)
+    {
+        // SLOW AF - TESTING ONLY REPLACE THIS GETCOMPONENT CALL!!
+        var renderer = bone.GetComponentInChildren<Renderer>();
+        if (renderer == null || renderer.material == null) return;
+
+        Color currentColor = renderer.material.color;
+        currentColor.a = alpha;
+        renderer.material.color = currentColor;
     }
 
 }
