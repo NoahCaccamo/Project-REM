@@ -11,7 +11,7 @@ public class ChainEditorWindow : EditorWindow
         EditorWindow.GetWindow(typeof(ChainEditorWindow), false, "Movelist Editor");
     }
 
-    public int currentCommandState;
+    public int currentCommandStateIndex;
     public int currentChainStep;
 
 
@@ -38,19 +38,37 @@ public class ChainEditorWindow : EditorWindow
             }
         }
 
-        currentCommandState = Mathf.Clamp(currentCommandState, 0, coreData.commandStates.Count - 1);
+        MoveList currentMovelist = coreData.moveLists[coreData.currentMovelistIndex];
+        GUILayout.Label("");
+        currentMovelist.name = GUILayout.TextField(currentMovelist.name);
+
+        coreData.currentMovelistIndex = Mathf.Clamp(coreData.currentMovelistIndex, 0, coreData.moveLists.Count - 1);
         GUILayout.BeginHorizontal();
-        currentCommandState = GUILayout.Toolbar(currentCommandState, coreData.GetCommandStateNames());
-        if (GUILayout.Button("New Command State", GUILayout.Width(175))) { coreData.commandStates.Add(new CommandState()); }
+        coreData.currentMovelistIndex = GUILayout.Toolbar(coreData.currentMovelistIndex, coreData.GetMoveListNames());
+
+        if (GUILayout.Button("New Move List", GUILayout.Width(175))) { coreData.moveLists.Add(new MoveList()); }
         GUILayout.EndHorizontal();
-        coreData.commandStates[currentCommandState].stateName = GUILayout.TextField(coreData.commandStates[currentCommandState].stateName, GUILayout.Width(200));
+
+
+
+
+        CommandState currentCommandStateObject = currentMovelist.commandStates[currentCommandStateIndex];
+
+        currentCommandStateIndex = Mathf.Clamp(currentCommandStateIndex, 0, currentMovelist.commandStates.Count - 1);
+        GUILayout.BeginHorizontal();
+        currentCommandStateIndex = GUILayout.Toolbar(currentCommandStateIndex, coreData.GetCommandStateNames());
+
+
+        if (GUILayout.Button("New Command State", GUILayout.Width(175))) { currentMovelist.commandStates.Add(new CommandState()); }
+        GUILayout.EndHorizontal();
+        currentCommandStateObject.stateName = GUILayout.TextField(currentCommandStateObject.stateName, GUILayout.Width(200));
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Add Command", GUILayout.Width(120)))
         {
-            if (coreData.commandStates[currentCommandState].commandSteps == null) { coreData.commandStates[currentCommandState].commandSteps = new List<CommandStep>(); }
-            coreData.commandStates[currentCommandState].AddCommandStep();
-            coreData.commandStates[currentCommandState].CleanUpBaseState();
+            if (currentCommandStateObject.commandSteps == null) { currentCommandStateObject.commandSteps = new List<CommandStep>(); }
+            currentCommandStateObject.AddCommandStep();
+            currentCommandStateObject.CleanUpBaseState();
 
         }
         GUILayout.Label("Draw Style:", GUILayout.Width(75));
@@ -68,7 +86,8 @@ public class ChainEditorWindow : EditorWindow
 
         int sCounter = 0;
 
-        foreach (CommandStep s in coreData.commandStates[currentCommandState].commandSteps)
+        // foreach (CommandStep s in coreData.commandStates[currentCommandState].commandSteps)
+        foreach (CommandStep s in currentCommandStateObject.commandSteps)
         {
             if (sCounter > drawBase)
             {
@@ -78,7 +97,7 @@ public class ChainEditorWindow : EditorWindow
                 {
 
 
-                    CommandStep t = coreData.commandStates[currentCommandState].commandSteps[f];
+                    CommandStep t = currentCommandStateObject.commandSteps[f];
 
                     if (t.activated)
                     {
@@ -118,7 +137,7 @@ public class ChainEditorWindow : EditorWindow
                     }
                         fCounter++;
                     }
-                    if (deleteMe > -1) { s.followUps.RemoveAt(deleteMe); coreData.commandStates[currentCommandState].CleanUpBaseState(); }
+                    if (deleteMe > -1) { s.followUps.RemoveAt(deleteMe); currentCommandStateObject.CleanUpBaseState(); }
                 }
                 sCounter++;
             }
@@ -130,7 +149,7 @@ public class ChainEditorWindow : EditorWindow
 
         GUI.backgroundColor = Color.red;
             int cCounter = 0;
-            foreach (CommandStep c in coreData.commandStates[currentCommandState].commandSteps)
+            foreach (CommandStep c in currentCommandStateObject.commandSteps)
             {
                 if (c.activated && cCounter > drawBase)
                 {
@@ -147,55 +166,58 @@ public class ChainEditorWindow : EditorWindow
 
         void WindowFunction(int windowID)
         {
-            if (currentCommandState >= coreData.commandStates.Count) { currentCommandState = 0; }
-            if (windowID >= coreData.commandStates[currentCommandState].commandSteps.Count) { return; }
-            coreData.commandStates[currentCommandState].commandSteps[windowID].myRect.width = 175;
-            coreData.commandStates[currentCommandState].commandSteps[windowID].myRect.height = 50;
+            MoveList currentMovelist = coreData.moveLists[coreData.currentMovelistIndex];
+            CommandState currentCommandStateObject = currentMovelist.commandStates[currentCommandStateIndex];
+
+            if (currentCommandStateIndex >= currentMovelist.commandStates.Count) { currentCommandStateIndex = 0; }
+            if (windowID >= currentCommandStateObject.commandSteps.Count) { return; }
+            currentCommandStateObject.commandSteps[windowID].myRect.width = 175;
+            currentCommandStateObject.commandSteps[windowID].myRect.height = 50;
 
             EditorGUI.LabelField(new Rect(6, 7, 35, 20), windowID.ToString());
 
-            coreData.commandStates[currentCommandState].commandSteps[windowID].command.motionCommand =
-                EditorGUI.IntPopup(new Rect(25, 5, 50, 20), coreData.commandStates[currentCommandState].commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
+            currentCommandStateObject.commandSteps[windowID].command.motionCommand =
+                EditorGUI.IntPopup(new Rect(25, 5, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
 
-            coreData.commandStates[currentCommandState].commandSteps[windowID].command.input =
-                EditorGUI.IntPopup(new Rect(75, 5, 65, 20), coreData.commandStates[currentCommandState].commandSteps[windowID].command.input, coreData.GetRawInputNames(), null, EditorStyles.miniButtonRight);
-            coreData.commandStates[currentCommandState].commandSteps[windowID].command.state =
-                EditorGUI.IntPopup(new Rect(40, 26, 70, 20), coreData.commandStates[currentCommandState].commandSteps[windowID].command.state, coreData.GetStateNames(), null, EditorStyles.miniButtonLeft);
+            currentCommandStateObject.commandSteps[windowID].command.input =
+                EditorGUI.IntPopup(new Rect(75, 5, 65, 20), currentCommandStateObject.commandSteps[windowID].command.input, coreData.GetRawInputNames(), null, EditorStyles.miniButtonRight);
+        currentCommandStateObject.commandSteps[windowID].command.state =
+                EditorGUI.IntPopup(new Rect(40, 26, 70, 20), currentCommandStateObject.commandSteps[windowID].command.state, coreData.GetStateNames(), null, EditorStyles.miniButtonLeft);
 
-        coreData.commandStates[currentCommandState].commandSteps[windowID].priority =
-            EditorGUI.IntField(new Rect(6, 26, 20, 20), coreData.commandStates[currentCommandState].commandSteps[windowID].priority);
+        currentCommandStateObject.commandSteps[windowID].priority =
+            EditorGUI.IntField(new Rect(6, 26, 20, 20), currentCommandStateObject.commandSteps[windowID].priority);
 
 
 
             int nextFollowup = -1;
-            nextFollowup = EditorGUI.IntPopup(new Rect(150, 15, 21, 20), nextFollowup, coreData.GetFollowUpNames(currentCommandState, true), null, EditorStyles.miniButton);
+            nextFollowup = EditorGUI.IntPopup(new Rect(150, 15, 21, 20), nextFollowup, coreData.GetFollowUpNames(currentCommandStateIndex, true), null, EditorStyles.miniButton);
 
             if (nextFollowup != -1)
             {
-                if (coreData.commandStates[currentCommandState].commandSteps.Count > 0)
+                if (currentCommandStateObject.commandSteps.Count > 0)
                 {
-                    if (nextFollowup >= coreData.commandStates[currentCommandState].commandSteps.Count + 1)
+                    if (nextFollowup >= currentCommandStateObject.commandSteps.Count + 1)
                     {
-                        coreData.commandStates[currentCommandState].RemoveChainCommands(windowID);
+                    currentCommandStateObject.RemoveChainCommands(windowID);
                     }
-                    else if (nextFollowup >= coreData.commandStates[currentCommandState].commandSteps.Count)
+                    else if (nextFollowup >= currentMovelist.commandStates[currentCommandStateIndex].commandSteps.Count)
                     {
-                        CommandStep nextCommand = coreData.commandStates[currentCommandState].AddCommandStep();
-                        nextCommand.myRect.x = coreData.commandStates[currentCommandState].commandSteps[windowID].myRect.xMax + 40f;
-                        nextCommand.myRect.y = coreData.commandStates[currentCommandState].commandSteps[windowID].myRect.center.y - 15f;
-                        nextCommand.command.input = coreData.commandStates[currentCommandState].commandSteps[windowID].command.input;
-                        nextCommand.command.state = coreData.commandStates[currentCommandState].commandSteps[windowID].command.state;
+                        CommandStep nextCommand = currentCommandStateObject.AddCommandStep();
+                        nextCommand.myRect.x = currentCommandStateObject.commandSteps[windowID].myRect.xMax + 40f;
+                        nextCommand.myRect.y = currentCommandStateObject.commandSteps[windowID].myRect.center.y - 15f;
+                        nextCommand.command.input = currentCommandStateObject.commandSteps[windowID].command.input;
+                        nextCommand.command.state = currentCommandStateObject.commandSteps[windowID].command.state;
 
-                        coreData.commandStates[currentCommandState].commandSteps[windowID].AddFollowUp(nextCommand.idIndex);
+                    currentCommandStateObject.commandSteps[windowID].AddFollowUp(nextCommand.idIndex);
 
                     }
-                    else { coreData.commandStates[currentCommandState].commandSteps[windowID].AddFollowUp(nextFollowup); }
+                    else { currentCommandStateObject.commandSteps[windowID].AddFollowUp(nextFollowup); }
                 }
                 else
                 {
-                    coreData.commandStates[currentCommandState].commandSteps[windowID].AddFollowUp(nextFollowup);
+                currentCommandStateObject.commandSteps[windowID].AddFollowUp(nextFollowup);
                 }
-                coreData.commandStates[currentCommandState].CleanUpBaseState();
+            currentCommandStateObject.CleanUpBaseState();
             }
 
             if ((Event.current.button == 0) && (Event.current.type == EventType.MouseDown))

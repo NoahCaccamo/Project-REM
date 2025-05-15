@@ -102,9 +102,13 @@ public class InputCommand
 [System.Serializable]
 public class MoveList
 {
-    public string name;
-    public List<CommandState> commandStates;
+    public string name = "<NEW MOVE LIST>";
+    public List<CommandState> commandStates = new List<CommandState>();
 
+    public MoveList()
+    {
+        commandStates.Add(new CommandState());
+    }
 }
 
 [System.Serializable]
@@ -131,7 +135,7 @@ public class CommandState
     public CommandState()
     {
         commandSteps = new List<CommandStep>();
-        stateName = "NEW COMMAND STATE";
+        stateName = "<NEW COMMAND STATE>";
     }
 
     public CommandStep AddCommandStep()
