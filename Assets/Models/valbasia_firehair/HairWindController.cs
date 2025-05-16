@@ -149,15 +149,26 @@ public class HairWindController : MonoBehaviour
         lastPlayerRotation = currentRotation;
     }
 
+    private MaterialPropertyBlock propertyBlock;
     void SetBoneAlpha(HairBone bone, float alpha)
     {
         // SLOW AF - TESTING ONLY REPLACE THIS GETCOMPONENT CALL!!
         var renderer = bone.GetComponentInChildren<Renderer>();
         if (renderer == null || renderer.material == null) return;
 
-        Color currentColor = renderer.material.color;
-        currentColor.a = alpha;
-        renderer.material.color = currentColor;
+
+        if (propertyBlock == null)
+            propertyBlock = new MaterialPropertyBlock();
+
+        renderer.GetPropertyBlock(propertyBlock);
+        propertyBlock.SetFloat("_GlobalAlpha", alpha);
+        renderer.SetPropertyBlock(propertyBlock);
+
+
+        // old - for default shader
+        //Color currentColor = renderer.material.color;
+        //currentColor.a = alpha;
+        //renderer.material.color = currentColor;
     }
 
 }
