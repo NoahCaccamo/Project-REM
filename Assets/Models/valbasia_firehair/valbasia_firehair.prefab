@@ -58,6 +58,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7635826562936255635, guid: c9da681e191f0c247a422a5b20b5785a,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 837a67003ad24194cbe03cc071b4bf1f, type: 2}
     - target: {fileID: 919132149155446097, guid: c9da681e191f0c247a422a5b20b5785a,
         type: 3}
       propertyPath: m_Name
@@ -90,6 +95,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 25c3962a4f9c94643af61fda6f2d298f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  player: {fileID: 0}
   target: {fileID: 0}
   boneLength: 0.4
   inertia: 0
@@ -97,6 +103,8 @@ MonoBehaviour:
   maxBendAngle: 121
   enableGravity: 1
   gravityStrength: 9.81
+  enableSideforce: 1
+  sideforceStrength: 9.81
   enableWind: 1
   windDirection: {x: 1, y: 0, z: 0}
   windStrength: 3

@@ -1,5 +1,5 @@
+using System;
 using UnityEngine;
-
 using UnityEngine;
 
 public class HairWindController : MonoBehaviour
@@ -45,6 +45,12 @@ public class HairWindController : MonoBehaviour
 
         if (hairBones == null || hairBones.Length == 0)
             hairBones = GetComponentsInChildren<HairBone>();
+
+        for (int i = 0; i < hairBones.Length; i++)
+        {
+            Renderer rend = hairBones[i].GetComponentInChildren<Renderer>();
+            rend.material.SetFloat("_BoneIndex", i);
+        }
     }
 
     void Update()
@@ -55,6 +61,7 @@ public class HairWindController : MonoBehaviour
 
         // Meter visibility
         int totalSegments = hairBones.Length;
+        // REPLACE SLOW GETCOMPONENT CALL!!!!
         float meterPercent = Mathf.Clamp01(playerRoot.gameObject.GetComponent<CharacterObject>().specialMeter / 100f);
         float visibleSegmentsFloat = meterPercent * totalSegments;
 
