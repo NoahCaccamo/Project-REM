@@ -83,17 +83,24 @@ public class CharacterObject : MonoBehaviour, IEffectable
         wallLayerMask = LayerMask.GetMask("Wall");
         myController = GetComponent<CharacterController>();
         // myAnimator = GetComponent<Animator>();
-        controlStrategy = new EnemyAIControl(aiBehaviour);
 
-        if (aiBehaviour != null)
+        // Set up our enemy AI's data
+        if (controlType == ControlType.AI)
         {
-            aiBehaviour.Initialize(this);
-        }
+            controlStrategy = new EnemyAIControl(aiBehaviour);
 
-        if (enemyData.maxArmor > 0)
-        {
-            hasArmor = true;
-            armorHealth = enemyData.maxArmor;
+            if (aiBehaviour != null)
+            {
+                aiBehaviour.Initialize(this);
+            }
+
+            hp = enemyData.hp;
+
+            if (enemyData.maxArmor > 0)
+            {
+                hasArmor = true;
+                armorHealth = enemyData.maxArmor;
+            }
         }
     }
 

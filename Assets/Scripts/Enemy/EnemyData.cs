@@ -18,6 +18,7 @@ public class EnemyData : ScriptableObject
     [IndexedItem(IndexedItemAttribute.IndexedItemType.STATES)]
     public int chaseState;
 
+    public float hp = 5f;
     public int maxArmor = 0;
 
     public float sightRange = 10f;
