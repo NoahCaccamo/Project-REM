@@ -1,17 +1,15 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEngine.GraphicsBuffer;
 
 public class AggressiveMeleeAI : EnemyAIBehaviour
 {
-    // just a reference, this is actually stored in CharacterObject
-    private EnemyData enemyData;
-
     private NavMeshAgent agent;
 
     public override void Initialize(CharacterObject enemy)
     {
-        enemyData = enemy.enemyData;
+        base.Initialize(enemy);
         agent = GetComponent<NavMeshAgent>();
 
         agent.updatePosition = false;
@@ -54,7 +52,7 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
         if (agent.destination != _enemy._playerTrans.position)
             agent.SetDestination(_enemy._playerTrans.position);
 
-        // Make sure there's a valid path and enough corners
+        // Make sure there's a valid path with more than the starting point
         if (agent.hasPath && agent.path.corners.Length > 1)
         {
             Vector3 nextCorner = agent.path.corners[1];
@@ -88,7 +86,14 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
         if (_enemy.atkCooldown == 0)
         {
             _enemy.FaceTarget(_enemy._playerTrans.position);
-            _enemy.ChangeState(enemyData.attackState); // Enemy punch
+
+            var punchAtk = enemyData.GetAttackByName("EnemyPawnch");
+
+            if (punchAtk != null)
+            {
+                _enemy.ChangeState(punchAtk.stateIndex);
+                punchAtk.cooldownTimer = punchAtk.cooldown;
+            }
         }
         if (_enemy.atkCooldown < -enemyData.attackCooldownDuration * 2)
         {

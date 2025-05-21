@@ -12,5 +12,6 @@ public class EnemyAIControl : IControlStrategy
     public void Tick(CharacterObject character)
     {
         aiBehaviour.UpdateAI(character);
+        aiBehaviour.TickCooldowns();
     }
 }
