@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using static UnityEngine.GraphicsBuffer;
 
 public class AggressiveMeleeAI : EnemyAIBehaviour
@@ -6,9 +7,15 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
     // just a reference, this is actually stored in CharacterObject
     private EnemyData enemyData;
 
+    private NavMeshAgent agent;
+
     public override void Initialize(CharacterObject enemy)
     {
         enemyData = enemy.enemyData;
+        agent = GetComponent<NavMeshAgent>();
+
+        agent.updatePosition = false;
+        agent.updateRotation = false;
     }
     public override void UpdateAI(CharacterObject enemy)
     {
@@ -37,6 +44,34 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
         }
     }
     public void Chase(CharacterObject _enemy)
+    {
+        if (_enemy._playerTrans == null)
+            return;
+
+        agent.nextPosition = _enemy.transform.position; // Sync agent with enemy
+
+        // Set destination if needed
+        if (agent.destination != _enemy._playerTrans.position)
+            agent.SetDestination(_enemy._playerTrans.position);
+
+        // Make sure there's a valid path and enough corners
+        if (agent.hasPath && agent.path.corners.Length > 1)
+        {
+            Vector3 nextCorner = agent.path.corners[1];
+            Vector3 dir = nextCorner - _enemy.transform.position;
+            dir.y = 0;
+            dir.Normalize();
+
+            // Apply velocity directly????
+            // MAKE SURE NO CONFLICTS WITH OTHER VELOCITY
+            // METHOD MIGHT BE SAFER?
+            float chaseSpeed = 0.02f * Time.deltaTime * 60 * _enemy.localTimescale;
+            _enemy.velocity += dir * chaseSpeed;
+
+        }
+    }
+
+    public void OldChase(CharacterObject _enemy)
     {
         Vector3 velDir = new Vector3(0, 0, 0);
 

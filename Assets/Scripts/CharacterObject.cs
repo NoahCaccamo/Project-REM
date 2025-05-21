@@ -101,6 +101,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 hasArmor = true;
                 armorHealth = enemyData.maxArmor;
             }
+
+            targetable = LayerMask.GetMask("Player");
+        } else
+        {
+            targetable = LayerMask.GetMask("Enemy");
         }
     }
 
@@ -951,10 +956,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
         velocity = v;
     }
 
+
+    LayerMask targetable;
     public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
-        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, 128);
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, targetable);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
 
