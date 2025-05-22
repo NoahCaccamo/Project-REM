@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 public enum SubState
@@ -42,4 +43,32 @@ public abstract class EnemyAIBehaviour : MonoBehaviour
         dir.Normalize();
         return dir;
     }
+    protected EnemyAttackOption ChooseAttack(Vector3 enemyPos, Vector3 playerPos)
+    {
+        float dist = Vector3.Distance(enemyPos, playerPos);
+
+        var validAttacks = enemyData.attackOptions
+            .Where(a => a.cooldownTimer <= 0f && dist >= a.minRange && dist <= a.maxRange)
+            .ToList();
+
+        if (validAttacks.Count == 0)
+            return null;
+
+        // TODO: Choose by weight, randomness, or other thing to pick best attack
+        return validAttacks[0];
+    }
+    protected EnemyAttackOption GetClosestReadyAttack(Vector3 enemyPos, Vector3 playerPos)
+    {
+        var attacks = enemyData.attackOptions
+            .Where(a => a.cooldownTimer <= 0f)
+            .OrderBy(a =>
+            {
+                float dist = Vector3.Distance(enemyPos, playerPos);
+                float targetDist = Mathf.Clamp(dist, a.minRange, a.maxRange);
+                return Mathf.Abs(dist - targetDist);
+            });
+
+        return attacks.FirstOrDefault();
+    }
+
 }

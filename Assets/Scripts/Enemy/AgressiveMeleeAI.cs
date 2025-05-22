@@ -6,6 +6,8 @@ using static UnityEngine.GraphicsBuffer;
 public class AggressiveMeleeAI : EnemyAIBehaviour
 {
     private NavMeshAgent agent;
+    private EnemyAttackOption currentAttack;
+    private float attackLockedUntil = 0f;
 
     public override void Initialize(CharacterObject enemy)
     {
@@ -23,18 +25,48 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
             return;
         }
 
+        if (Time.time < attackLockedUntil)
+            return;
+
         bool inSight = PlayerInRange(enemy, enemyData.sightRange);
         bool inAttackRange = PlayerInRange(enemy, enemyData.attackRange);
 
         if (!inSight && !inAttackRange) { enemy.target = null; currentSubState = SubState.Idle; return; }
-        if (inSight && !inAttackRange) currentSubState = SubState.Chase;//enemy.ChangeState(enemyData.chaseState);
-        if (inSight && inAttackRange) currentSubState = SubState.Attacking;
+        //  if (inSight && !inAttackRange) currentSubState = SubState.Chase;//enemy.ChangeState(enemyData.chaseState);
+        //if (inSight && inAttackRange) currentSubState = SubState.Attacking;
 
+        Vector3 targetPos = enemy._playerTrans?.position ?? Vector3.zero;
+
+        EnemyAttackOption chosenAtk = ChooseAttack(enemy.transform.position, enemy._playerTrans.position);
+
+        if (chosenAtk != null)
+        {
+            currentSubState = SubState.Attacking;
+            currentAttack = chosenAtk;
+        }
+        else
+        {
+            EnemyAttackOption fallback = GetClosestReadyAttack(enemy.transform.position, targetPos);
+
+            if (fallback != null)
+            {
+                currentSubState = SubState.Chase;
+                currentAttack = fallback; // for range reference
+            }
+            else
+            {
+                currentSubState = SubState.Idle;
+                currentAttack = null;
+            }
+        }
 
         switch (currentSubState)
         {
             case SubState.Chase:
-                Chase(enemy);
+                if (currentAttack != null)
+                    MoveTowardRange(enemy, currentAttack.maxRange, currentAttack.maxRange);
+                else
+                    Chase(enemy);
                 break;
             case SubState.Attacking:
                 Attacking(enemy);
@@ -80,24 +112,117 @@ public class AggressiveMeleeAI : EnemyAIBehaviour
         _enemy.velocity += velDir * Time.deltaTime * 60 * _enemy.localTimescale;
     }
 
-    public void Attacking(CharacterObject _enemy)
+    public void Attacking(CharacterObject enemy)
     {
-        _enemy.atkCooldown--;
-        if (_enemy.atkCooldown == 0)
+        if (currentAttack == null) return;
+
+        enemy.atkCooldown--;
+        if (enemy.atkCooldown <= 0)
         {
-            _enemy.FaceTarget(_enemy._playerTrans.position);
+            enemy.FaceTarget(enemy._playerTrans.position);
+            enemy.ChangeState(currentAttack.stateIndex);
+            currentAttack.cooldownTimer = currentAttack.cooldown;
 
-            var punchAtk = enemyData.GetAttackByName("EnemyPawnch");
+            // Reset for next round
+            currentAttack = null;
+            enemy.atkCooldown = enemyData.attackCooldownDuration;
 
-            if (punchAtk != null)
+            attackLockedUntil = Time.time + 3;
+        }
+    }
+
+    private void UpdateAttackStuff(CharacterObject enemy)
+    {
+
+    }
+
+
+    // BUGGY WHEN FLEEING!!! Maybe sometimes just cant find the path
+    private void MoveTowardRange(CharacterObject enemy, float minRange, float maxRange)
+    {
+        if (enemy._playerTrans == null)
+            return;
+
+        float distance = Vector3.Distance(enemy.transform.position, enemy._playerTrans.position);
+
+        // Sync agent with enemy's position
+        agent.nextPosition = enemy.transform.position;
+
+        if (distance > maxRange)
+        {
+            // Move toward player
+            agent.SetDestination(enemy._playerTrans.position);
+            MoveAlongNavPath(enemy);
+        }
+        else if (distance < minRange)
+        {
+            // Move away (flee)
+            Vector3 awayDir = (enemy.transform.position - enemy._playerTrans.position).normalized;
+            float fleeDistance = minRange + 1.5f;
+
+            Vector3 fleeTarget = enemy.transform.position + awayDir * fleeDistance;
+
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(fleeTarget, out navHit, 3f, NavMesh.AllAreas))
             {
-                _enemy.ChangeState(punchAtk.stateIndex);
-                punchAtk.cooldownTimer = punchAtk.cooldown;
+                agent.SetDestination(navHit.position);
+                MoveAlongNavPath(enemy);
+            }
+            else
+            {
+                // Couldn�t find valid position, stop movement
+                enemy.velocity = Vector3.zero;
             }
         }
-        if (_enemy.atkCooldown < -enemyData.attackCooldownDuration * 2)
+        else
         {
-            _enemy.atkCooldown = enemyData.attackCooldownDuration;
+            // Already in ideal range
+            agent.ResetPath();
+            enemy.velocity = Vector3.zero;
+        }
+    }
+
+
+    private void MoveAlongNavPath(CharacterObject enemy)
+    {
+        if (agent.hasPath && agent.path.corners.Length > 1)
+        {
+            Vector3 nextCorner = agent.path.corners[1];
+            Vector3 dir = nextCorner - enemy.transform.position;
+            dir.y = 0;
+            dir.Normalize();
+
+            float moveSpeed = 0.02f * Time.deltaTime * 60 * enemy.localTimescale;
+            enemy.velocity += dir * moveSpeed;
+        }
+    }
+
+
+    private void MoveTowardRangeOld(CharacterObject enemy, float minRange, float maxRange)
+    {
+        float dist = Vector3.Distance(enemy.transform.position, enemy._playerTrans.position);
+
+        if (dist > maxRange)
+        {
+            // Chase logic
+            Vector3 dir = enemy._playerTrans.position - enemy.transform.position;
+            dir.y = 0;
+            dir.Normalize();
+            enemy.velocity += dir * Time.deltaTime * 60 * enemy.localTimescale * 0.02f;
+        }
+        else if (dist < minRange)
+        {
+            // Optional: Back away logic
+            // UNTESTED
+            Vector3 dir = enemy._playerTrans.position - enemy.transform.position;
+            dir.y = 0;
+            dir.Normalize();
+            enemy.velocity -= dir * Time.deltaTime * 60 * enemy.localTimescale * 0.02f;
+        }
+        else
+        {
+            // In range, idle or strafe
+            enemy.velocity = Vector3.zero;
         }
     }
 }
