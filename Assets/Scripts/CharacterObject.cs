@@ -733,7 +733,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
             lookRotation = Quaternion.LookRotation(direction);
         }
 
-        if (Input.GetButtonDown("Slash2"))
+        // HORRID HARDCODE AA
+        if (Input.GetButtonDown("Slash"))
         {
             Debug.Log("PEW");
             GameObject newBullet = Instantiate(bullet, transform.position, lookRotation);
@@ -803,9 +804,9 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public void GetCommandState()
     {
         currentCommandState = 0;
-        for (int c = 0; c < GameEngine.coreData.commandStates.Count; c++)
+        for (int c = 0; c < GameEngine.gameEngine.CurrentMoveList().commandStates.Count; c++)
         {
-            CommandState s = GameEngine.coreData.commandStates[c];
+            CommandState s = GameEngine.gameEngine.CurrentMoveList().commandStates[c];
             if (s.aerial == aerialFlag)
             {
                 currentCommandState = c;
@@ -819,12 +820,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void UpdateInput()
     {
         leftStick = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        if (Input.GetButton("RB"))
-        {
-            targeting = true;
-            //localTimescale = 0.2f;
-            //Time.timeScale = 0.2f;
-        }
+        if (Input.GetButton("RB")) { targeting = true; }
         else { targeting = false; }
 
         if (Input.GetButtonDown("RB")) 
@@ -848,12 +844,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
             }
         }
 
+        if (Input.GetButtonDown("LT")) { GameEngine.gameEngine.ToggleMoveList(); }
+
         inputBuffer.Update();
 
         bool startState = false;
 
         GetCommandState();
-        CommandState comState = GameEngine.coreData.commandStates[currentCommandState];
+        CommandState comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
 
         if (currentCommandStep >= comState.commandSteps.Count) { currentCommandStep = 0; } // Change this to state specific or even commandstep specific variables
 

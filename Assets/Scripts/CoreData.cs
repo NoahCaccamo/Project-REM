@@ -16,7 +16,8 @@ public class CoreData : ScriptableObject
     // delete commands
     //public List<InputCommand> commands;
 
-    public List<CommandState> commandStates;
+    // Using movelists now instead of one command state list
+    // public List<CommandState> commandStates;
 
     public List<MoveList> moveLists;
 
@@ -27,6 +28,8 @@ public class CoreData : ScriptableObject
     public List<RawInput> rawInputs;
     public List<MotionCommand> motionCommands;
     // Save Files
+
+    public int currentMovelistIndex;
 
 
     public string[] GetScriptNames()
@@ -75,14 +78,14 @@ public class CoreData : ScriptableObject
 
     public string[] GetFollowUpNames(int _commandState, bool _deleteField)
     {
-        int nameCount = commandStates[_commandState].commandSteps.Count;
+        int nameCount = moveLists[currentMovelistIndex].commandStates[_commandState].commandSteps.Count;
         if (_deleteField) { nameCount += 2; }
         string[] _names = new string[nameCount];
         for (int i = 0; i < _names.Length; i++)
         {
             if (i < _names.Length - 2)
             {
-                _names[i] = commandStates[_commandState].commandSteps[i].idIndex.ToString();
+                _names[i] = moveLists[currentMovelistIndex].commandStates[_commandState].commandSteps[i].idIndex.ToString();
             }
             else if (i < _names.Length - 1)
             {
@@ -106,14 +109,22 @@ public class CoreData : ScriptableObject
         return _names;
     }
 
-    //UNTESTED
     public string[] GetCommandStateNames()
     {
-        int nameCount = commandStates.Count;
-        string[] _names = new string[nameCount];
+        string[] _names = new string[moveLists[currentMovelistIndex].commandStates.Count];
         for (int i = 0; i < _names.Length; i++)
         {
-            _names[i] = commandStates[i].stateName;
+            _names[i] = moveLists[currentMovelistIndex].commandStates[i].stateName.ToString();
+        }
+        return _names;
+    }
+
+    public string[] GetMoveListNames()
+    {
+        string[] _names = new string[moveLists.Count];
+        for (int i = 0; i < _names.Length; i++)
+        {
+            _names[i] = moveLists[i].name.ToString();
         }
         return _names;
     }

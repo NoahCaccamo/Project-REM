@@ -863,426 +863,192 @@ MonoBehaviour:
     name: Hold Velocity
   - index: 0
     name: Shoot
-  commandStates:
-  - stateName: Grounded
-    aerial: 0
-    explicitState: 0
-    state: 0
-    commandSteps:
-    - idIndex: 0
-      command:
-        motionCommand: 0
-        input: 0
-        state: 0
-        inputs: 
-      priority: 0
-      followUps: 01000000060000000700000008000000090000000a0000000b000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 240
-        height: 30
-      activated: 1
-    - idIndex: 1
-      command:
-        motionCommand: 0
-        input: 1
-        state: 8
-        inputs: 
-      priority: 0
-      followUps: 02000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 37
-        y: 45
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 2
-      command:
-        motionCommand: 0
-        input: 1
-        state: 8
-        inputs: 
-      priority: 1
-      followUps: 0300000005000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 228
-        y: 92
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 3
-      command:
-        motionCommand: 0
-        input: 1
-        state: 8
-        inputs: 
-      priority: 1
-      followUps: 040000000c000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 360
-        y: 168
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 4
-      command:
-        motionCommand: 0
-        input: 1
-        state: 24
-        inputs: 
-      priority: 1
-      followUps: 0d000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 498
-        y: 233
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 5
-      command:
-        motionCommand: 0
-        input: 3
-        state: 2
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 419
-        y: 39
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 6
-      command:
-        motionCommand: 0
-        input: 0
-        state: 1
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 31
-        y: 161
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 7
-      command:
-        motionCommand: 0
-        input: 2
-        state: 9
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 33
-        y: 228
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 8
-      command:
-        motionCommand: 0
-        input: 3
-        state: 25
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 45
-        y: 323
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 9
-      command:
-        motionCommand: 3
-        input: 1
-        state: 12
-        inputs: 
-      priority: 2
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 50
-        y: 432
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 10
-      command:
-        motionCommand: 4
-        input: 1
-        state: 11
-        inputs: 
-      priority: 2
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 49
-        y: 491
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 11
-      command:
-        motionCommand: 0
-        input: 6
-        state: 2
-        inputs: 
-      priority: 3
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 360
-        y: 383
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 12
-      command:
-        motionCommand: 0
-        input: 3
-        state: 22
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 578
-        y: 145
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 13
-      command:
-        motionCommand: 0
-        input: 1
-        state: 19
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 678
-        y: 294
-        width: 175
-        height: 50
-      activated: 1
-    omitList: 020000000300000005000000040000000c0000000d000000
-    nextFollowups: 01000000060000000700000008000000090000000a0000000b000000
-  - stateName: Aerial
-    aerial: 1
-    explicitState: 0
-    state: 0
-    commandSteps:
-    - idIndex: 0
-      command:
-        motionCommand: 0
-        input: 0
-        state: 0
-        inputs: 
-      priority: 0
-      followUps: 010000000200000003000000060000000700000008000000090000000a000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 240
-        height: 30
-      activated: 1
-    - idIndex: 1
-      command:
-        motionCommand: 0
-        input: 0
-        state: 1
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 67
-        y: 78
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 2
-      command:
-        motionCommand: 0
-        input: 2
-        state: 13
-        inputs: 
-      priority: 0
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 38
-        y: 549
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 3
-      command:
-        motionCommand: 0
-        input: 1
-        state: 8
-        inputs: 
-      priority: 0
-      followUps: 04000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 46
-        y: 191
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 4
-      command:
-        motionCommand: 0
-        input: 1
-        state: 8
-        inputs: 
-      priority: 1
-      followUps: 05000000
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 290
-        y: 186
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 5
-      command:
-        motionCommand: 0
-        input: 1
-        state: 19
-        inputs: 
-      priority: 1
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 505
-        y: 196
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 6
-      command:
-        motionCommand: 4
-        input: 1
-        state: 15
-        inputs: 
-      priority: 2
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 38
-        y: 267
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 7
-      command:
-        motionCommand: 0
-        input: 3
-        state: 25
-        inputs: 
-      priority: 1
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 221
-        y: 471
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 8
-      command:
-        motionCommand: 4
-        input: 3
-        state: 17
-        inputs: 
-      priority: 2
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 35
-        y: 472
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 9
-      command:
-        motionCommand: 0
-        input: 6
-        state: 18
-        inputs: 
-      priority: 3
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 265
-        y: 74
-        width: 175
-        height: 50
-      activated: 1
-    - idIndex: 10
-      command:
-        motionCommand: 3
-        input: 1
-        state: 20
-        inputs: 
-      priority: 2
-      followUps: 
-      strict: 0
-      myRect:
-        serializedVersion: 2
-        x: 219
-        y: 265
-        width: 175
-        height: 50
-      activated: 1
-    omitList: 0400000005000000
-    nextFollowups: 010000000200000003000000060000000700000008000000090000000a000000
   moveLists:
-  - name: 
-    commandStates: []
-  - name: 
-    commandStates: []
+  - name: Unarmed
+    commandStates:
+    - stateName: Grounded
+      aerial: 0
+      explicitState: 0
+      state: 0
+      commandSteps:
+      - idIndex: 0
+        command:
+          motionCommand: 0
+          input: 0
+          state: 0
+          inputs: 
+        priority: 0
+        followUps: 010000000200000003000000
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 0
+          height: 0
+        activated: 1
+      - idIndex: 1
+        command:
+          motionCommand: 0
+          input: 0
+          state: 1
+          inputs: 
+        priority: 0
+        followUps: 
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 48
+          y: 91
+          width: 175
+          height: 50
+        activated: 1
+      - idIndex: 2
+        command:
+          motionCommand: 0
+          input: 3
+          state: 8
+          inputs: 
+        priority: 0
+        followUps: 04000000
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 36
+          y: 170
+          width: 175
+          height: 50
+        activated: 1
+      - idIndex: 3
+        command:
+          motionCommand: 0
+          input: 1
+          state: 25
+          inputs: 
+        priority: 0
+        followUps: 
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 52
+          y: 254
+          width: 175
+          height: 50
+        activated: 1
+      - idIndex: 4
+        command:
+          motionCommand: 0
+          input: 3
+          state: 8
+          inputs: 
+        priority: 0
+        followUps: 05000000
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 277
+          y: 176
+          width: 175
+          height: 50
+        activated: 1
+      - idIndex: 5
+        command:
+          motionCommand: 0
+          input: 3
+          state: 19
+          inputs: 
+        priority: 0
+        followUps: 
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 492
+          y: 186
+          width: 175
+          height: 50
+        activated: 1
+      omitList: 0400000005000000
+      nextFollowups: 010000000200000003000000
+    - stateName: Aerial
+      aerial: 0
+      explicitState: 0
+      state: 0
+      commandSteps: []
+      omitList: 
+      nextFollowups: 
+  - name: Sword
+    commandStates:
+    - stateName: Grounded
+      aerial: 0
+      explicitState: 0
+      state: 0
+      commandSteps:
+      - idIndex: 0
+        command:
+          motionCommand: 0
+          input: 0
+          state: 0
+          inputs: 
+        priority: 0
+        followUps: 0100000002000000
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 0
+          height: 0
+        activated: 1
+      - idIndex: 1
+        command:
+          motionCommand: 0
+          input: 0
+          state: 1
+          inputs: 
+        priority: 0
+        followUps: 
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 52
+          y: 91
+          width: 175
+          height: 50
+        activated: 1
+      - idIndex: 2
+        command:
+          motionCommand: 0
+          input: 3
+          state: 24
+          inputs: 
+        priority: 0
+        followUps: 
+        strict: 0
+        myRect:
+          serializedVersion: 2
+          x: 87
+          y: 197
+          width: 175
+          height: 50
+        activated: 1
+      omitList: 
+      nextFollowups: 0100000002000000
+    - stateName: Aerial
+      aerial: 0
+      explicitState: 0
+      state: 0
+      commandSteps: []
+      omitList: 
+      nextFollowups: 
+  - name: <NEW MOVE LIST>
+    commandStates:
+    - stateName: <NEW COMMAND STATE>
+      aerial: 0
+      explicitState: 0
+      state: 0
+      commandSteps: []
+      omitList: 
+      nextFollowups: 
   globalPrefabs:
   - {fileID: 2687638549728087039, guid: ff32e0483e00b304a82f7fa3d3ed6db5, type: 3}
   rawInputs:
@@ -1371,3 +1137,4 @@ MonoBehaviour:
     angleChange: 0
     prevAngle: 0
     curAngle: 0
+  currentMovelistIndex: 0

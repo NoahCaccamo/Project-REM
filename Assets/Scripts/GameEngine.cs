@@ -17,9 +17,19 @@ public class GameEngine : MonoBehaviour
 
     public CharacterObject mainCharacter;
 
-    public int globalMovelist;
+    public int globalMovelistIndex;
 
-    // public MoveList CurrentMoveList()
+    public MoveList CurrentMoveList()
+    {
+        return coreData.moveLists[globalMovelistIndex];
+    }
+
+    public void ToggleMoveList()
+    {
+        globalMovelistIndex++;
+        if (globalMovelistIndex > coreData.moveLists.Count - 1) { globalMovelistIndex = 0; }
+        if (globalMovelistIndex < 0) { globalMovelistIndex = coreData.moveLists.Count - 1; }
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -41,9 +51,9 @@ public class GameEngine : MonoBehaviour
         if (Time.timeScale < 1f) { Time.timeScale += 0.01f; }
     }
 
-    public static void GlobalPrefab(int _index, GameObject _obj)
+    public static void GlobalPrefab(int _index, GameObject _parentObj)
     {
-        GameObject nextPrefab = Instantiate(coreData.globalPrefabs[_index], _obj.transform.position, Quaternion.identity, _obj.transform.root);
+        GameObject nextPrefab = Instantiate(coreData.globalPrefabs[_index], _parentObj.transform.position, Quaternion.identity, _parentObj.transform.root);
 
         // if VFX
         foreach (Animator myAnimator in nextPrefab.transform.GetComponentsInChildren<Animator>())
@@ -98,6 +108,7 @@ public class GameEngine : MonoBehaviour
             GUI.Label(new Rect(500f - 25f, m * ySpace, 100, 20), playerInputBuffer.motionCommandCheck[m].ToString());
             GUI.Label(new Rect(500f, m * ySpace, 100, 20), coreData.motionCommands[m].name);
         }
+        GUI.Label(new Rect(600f, 10f, 100, 20), CurrentMoveList().name.ToString());
 
         // HP AND OVERCLOCK
         GUI.Label(new Rect(200f, 15f, 90, 20), "HP: " + mainCharacter.hp.ToString());
