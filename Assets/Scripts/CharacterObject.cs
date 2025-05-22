@@ -50,22 +50,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public GameObject target;
     public GameObject softTarget = null;
 
-    public bool wallrunning = false;
-
     public bool invulnerable = false;
 
     public bool faceStick = false;
 
-    // experimental Ai stuff
-    public NavMeshAgent _agent;
     public Transform _playerTrans;
-    private Vector3 _desVelocity;
-    private float _speed = 2;
-    private float _turnSpeed = 3;
 
     public LayerMask whatIsPlayer;
 
-    float localTimescale = 1f;
+    public float localTimescale = 1f;
 
     public GameObject bullet;
     public GameObject enemyDrop;
@@ -76,10 +69,44 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public RoomManager roomManager;
     public Camera minigameCam;
 
+    public IControlStrategy controlStrategy;
+    public EnemyAIBehaviour aiBehaviour;
+    public EnemyData enemyData;
+
+    public bool hasArmor = false;
+    public float armorHealth = 100f;
+    public bool isArmorBroken = false;
+
+
     void Start()
     {
+        wallLayerMask = LayerMask.GetMask("Wall");
         myController = GetComponent<CharacterController>();
         // myAnimator = GetComponent<Animator>();
+
+        // Set up our enemy AI's data
+        if (controlType == ControlType.AI)
+        {
+            controlStrategy = new EnemyAIControl(aiBehaviour);
+
+            if (aiBehaviour != null)
+            {
+                aiBehaviour.Initialize(this);
+            }
+
+            hp = enemyData.hp;
+
+            if (enemyData.maxArmor > 0)
+            {
+                hasArmor = true;
+                armorHealth = enemyData.maxArmor;
+            }
+
+            targetable = LayerMask.GetMask("Player");
+        } else
+        {
+            targetable = LayerMask.GetMask("Enemy");
+        }
     }
 
     // INVENTORY STUFF
@@ -98,95 +125,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
     // END INVENTORY STUFF
 
-    private void Updaste()
-    {
-        // hitcancel preferabbly before input but does this need to be in fixed update
-        // HitCancel();
-
-
-        /*
-        if (GameEngine.hitStop <= 0)
-        {
-            switch (controlType)
-            {
-                case ControlType.AI:
-                    UpdateAI();
-                    break;
-
-                case ControlType.PLAYER:
-                    UpdateInput();
-                    break;
-            }
-        }
-        */
-
-    }
-
     public float atkCooldown = 60;
-    void UpdateAI()
-    {
-        
-        if (hitStun > 0)
-        {
-            atkCooldown = 60;
-            return;
-        }
-        /* wack navmesh hacky stuff
-        
-
-        SetVelocity(new Vector3(0f,0f,0f));
-        Vector3 lookPos;
-        Quaternion targetRot;
-
-        this._agent.destination = this._playerTrans.position;
-        this._desVelocity = this._agent.desiredVelocity;
-
-        this._agent.updatePosition = false;
-        this._agent.updateRotation = false;
-
-        lookPos = this._playerTrans.position - this.transform.position;
-        lookPos.y = 0;
-        targetRot = Quaternion.LookRotation(lookPos);
-        this.transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * this._turnSpeed);
-
-       SetVelocity(this._desVelocity.normalized * this._speed * Time.deltaTime);
-        */
-
-
-        bool playerInSightRange = Physics.CheckSphere(transform.position, 10, whatIsPlayer);
-        bool playerInAttackRange = Physics.CheckSphere(transform.position, 2, whatIsPlayer);
-
-        if (!playerInSightRange && !playerInAttackRange) { target = null; return; }
-        if (playerInSightRange && !playerInAttackRange) ChasePlayer();
-        if (playerInSightRange && playerInAttackRange) AttackPlayer();
-    }
-
-    private void ChasePlayer()
-    {
-        Vector3 velDir = new Vector3(0, 0, 0);
-
-        velDir = this._playerTrans.position - this.gameObject.transform.position;
-        velDir.y = 0;
-        velDir.Normalize();
-
-        velDir *= 0.02f;
-
-        velocity += velDir * Time.deltaTime * 60 * localTimescale;
-    }
-
-    private void AttackPlayer()
-    {
-        atkCooldown--;
-        if (atkCooldown == 0)
-        {
-            FaceTarget(this._playerTrans.position);
-            StartState(5); // Enemy punch
-        }
-        if (atkCooldown < -120)
-        {
-            atkCooldown = 60;
-        }
-    }
 
 
     void Update()
@@ -194,7 +133,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         switch (controlType)
         {
             case ControlType.AI:
-                UpdateAI();
+                controlStrategy?.Tick(this);
                 break;
 
             case ControlType.PLAYER:
@@ -239,10 +178,16 @@ public class CharacterObject : MonoBehaviour, IEffectable
             }
             else
             {
-                localTimescale = 1f;
-                overclocked = false;
+                ExitOverclocked();
             }
         }
+    }
+
+    void ExitOverclocked()
+    {
+        hasArmor = false;
+        localTimescale = 1f;
+        overclocked = false;
     }
 
     public float aniMoveSpeed;
@@ -302,7 +247,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         }
     }
 
-    void FaceTarget(Vector3 tarPos)
+    public void FaceTarget(Vector3 tarPos)
     {
         Vector3 tarOffset = tarPos - transform.position;
         tarOffset.y = 0;
@@ -453,6 +398,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void EndState()
     {
         noGrav = 0;
+        isWallSlumped = false;
 
         currentStateTime = 0;
         currentState = 0;
@@ -765,6 +711,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // Attack
         hitActive = 0;
         hitConfirm = 0;
+        isWallSlumped = false;
 
         // Reset oneshot event flags
         foreach (StateEvent _ev in GameEngine.coreData.characterStates[currentState].events)
@@ -789,6 +736,20 @@ public class CharacterObject : MonoBehaviour, IEffectable
             FaceTarget(softTarget.gameObject.transform.position);
             faceStick = false;
         }
+    }
+
+    // externally called from enemy
+    public void ChangeState(int _newState)
+    {
+
+        OnEnteringState(_newState);
+        StartState(_newState);
+    }
+
+    // optional hook when changing states
+    void OnEnteringState(int _newState)
+    {
+
     }
 
     void SetAnimation(string aniName)
@@ -832,14 +793,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             if (overclocked)
             {
-                overclocked = false;
-                localTimescale = 1f;
+                ExitOverclocked();
             }
             else
             {
                 if (specialMeter >= 50)
                 {
                     overclocked = true;
+                    hasArmor = true;
                 }
             }
         }
@@ -995,10 +956,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
         velocity = v;
     }
 
+
+    LayerMask targetable;
     public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
-        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, 128);
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, targetable);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
 
@@ -1061,11 +1024,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         hp--;
         Debug.Log(hp);
 
-        Vector3 nextKnockback = curAtk.knockback;
-        Vector3 knockOrientation = attacker.character.transform.forward;
-
-        nextKnockback = Quaternion.LookRotation(knockOrientation) * nextKnockback;
-        SetVelocity(nextKnockback);
+        // Hit animation
         currHitAni.x = curAtk.hitAni.x;
         currHitAni.y = curAtk.hitAni.y;
 
@@ -1076,6 +1035,17 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         currHitAni = targetHitAni * 0.7f; // multipy by target start position for hurt animation blending
 
+        if (!HandleArmor(curAtk, attacker)) return;
+
+
+        // Knockback
+        Vector3 nextKnockback = curAtk.knockback;
+        Vector3 knockOrientation = attacker.character.transform.forward;
+
+        nextKnockback = Quaternion.LookRotation(knockOrientation) * nextKnockback;
+        SetVelocity(nextKnockback);
+
+        // hit reaction
         FaceTarget(attacker.transform.position);
         GameEngine.SetHitStop(curAtk.hitStop);
 
@@ -1114,6 +1084,28 @@ public class CharacterObject : MonoBehaviour, IEffectable
         GlobalPrefab(0); // more magic number
     }
 
+    private bool HandleArmor(Attack curAtk, CharacterObject attacker)
+    {
+        if (hasArmor && !isArmorBroken)
+        {
+            armorHealth -= 34;// curAtk.damage;
+
+            if (armorHealth <= 0)
+            {
+                isArmorBroken = true;
+                // Trigger armor break visual/sound/effect?
+            }
+            else
+            {
+                // Play stagger visual/audio without stun
+                GameEngine.SetHitStop(curAtk.hitStop);
+                // FaceTarget(attacker.transform.position);
+                return false; // Cancel hit logic
+            }
+        }
+
+        return true; // no armor, continue hit logic
+    }
     public void GetShot(CharacterObject attacker)
     {
         if (invulnerable)
@@ -1146,11 +1138,36 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     public float hitStun;
     public float noGrav;
+
+    public bool isWallSlumped = false;
+    LayerMask wallLayerMask;
     public void GettingHit()
     {
         hitStun -= Time.deltaTime * 60 * localTimescale;
         noGrav -= Time.deltaTime * 60 * localTimescale;
         if (hitStun <= 0) { EndState(); }
+
+        // Wall Slump
+        // Add isKnockback flag to attacks that launch?
+        // have a isInLaunchState flag or state? could evaluate if touching ground as well?
+        // wall slump vs wall bounce
+
+        if (!isWallSlumped)
+        {
+            Vector3 dir = velocity.normalized;
+            Vector3 origin = transform.position + Vector3.up * 0.5f;
+
+            // could use OnControllerColliderHit()?
+            if (Physics.Raycast(origin, dir, out RaycastHit hit, 1.5f, wallLayerMask))
+            {
+                isWallSlumped = true;
+                velocity.x *= -1;
+                velocity.z *= -1;
+                // StartState(CoreData.WALL_SLUMP_STATE); // Transition to slump state
+                return;
+            }
+        }
+
 
         // HACKY PLACE FOR PROTOTYPE MOVE THIS
         //Dramatic freeze before death

@@ -32,6 +32,7 @@ public class WallRunning : MonoBehaviour
     public Transform orientation;
     private CharacterObject pm;
 
+    /*
     private void Start()
     {
         pm = GetComponent<CharacterObject>();
@@ -114,4 +115,5 @@ public class WallRunning : MonoBehaviour
     {
         pm.wallrunning = false;
     }
+    */
 }
