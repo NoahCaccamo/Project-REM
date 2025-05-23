@@ -61,14 +61,30 @@ public class StateEvent
 {
     public float start;
     public float end;
-    public float variable;
+    //public float variable;
+    public bool active = true;
 
     [IndexedItem(IndexedItemAttribute.IndexedItemType.SCRIPTS)]
     public int script;
 
     public bool hasExecuted;
 
-    // list of scriptParameters here
+    // This could just be floats cause we dont need the parameters themselves
+    // those can be just stored in the CharacterScripts themselves
+    public List<ScriptParameter> parameters;
+
+    public StateEvent()
+    {
+        active = true;
+        parameters = new List<ScriptParameter>();
+    }
+}
+
+[System.Serializable]
+public class ScriptParameter
+{
+    public string name;
+    public float val;
 }
 
 
@@ -79,8 +95,9 @@ public class CharacterScript
     [HideInInspector]
     public int index;
 
-    public string name;
-    // might need more variable pass or flag for advanced in future
+    public string name = "< NEW CHARACTER SCRIPT >";
+
+    public List<ScriptParameter> parameters = new List<ScriptParameter>();
     //public float variable;
 }
 
