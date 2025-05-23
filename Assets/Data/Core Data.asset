@@ -21,14 +21,20 @@ MonoBehaviour:
     events:
     - start: 0
       end: 60
-      variable: 0.05
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.075
     - start: 0
       end: 60
-      variable: 1
+      active: 1
       script: 6
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -42,19 +48,28 @@ MonoBehaviour:
     events:
     - start: 2
       end: 2
-      variable: 0.45
+      active: 1
       script: 7
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.45
     - start: 0
       end: 20
-      variable: 0.05
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.05
     - start: 8
       end: 20
-      variable: 1
+      active: 1
       script: 6
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     attacks: []
     jumpReq: 1
     meterReq: 0
@@ -68,29 +83,44 @@ MonoBehaviour:
     events:
     - start: 6
       end: 13
-      variable: 0.07
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.07
     - start: 3
       end: 13
-      variable: 1
+      active: 1
       script: 6
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     - start: 1
       end: 13
-      variable: 1
+      active: 1
       script: 11
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     - start: 0
       end: 5
-      variable: 1
+      active: 1
       script: 9
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     - start: 0
       end: 5
-      variable: 0.2
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.2
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -104,9 +134,10 @@ MonoBehaviour:
     events:
     - start: 0
       end: 10
-      variable: 0
+      active: 1
       script: 4
       hasExecuted: 0
+      parameters: []
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -120,9 +151,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -136,14 +170,20 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0
     - start: 0
       end: 5
-      variable: 0.05
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.05
     attacks:
     - start: 25
       length: 7
@@ -163,15 +203,26 @@ MonoBehaviour:
     groundedReq: 0
   - stateName: Enemy/Slime/Attack1
     index: 0
-    length: 0
+    length: 20
     loop: 0
     blendRate: 0.1
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 0
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
+    - start: 0.67010313
+      end: 13.81445
+      active: 0
+      script: 10
+      hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -185,9 +236,10 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 0
       script: 0
       hasExecuted: 0
+      parameters: []
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -201,24 +253,36 @@ MonoBehaviour:
     events:
     - start: 0
       end: 25
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     - start: 0
       end: 1
-      variable: 0.1
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.1
     - start: 14
       end: 14
-      variable: 0.2
+      active: 1
       script: 1
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.2
     - start: 0
       end: 10
-      variable: 0.03
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.03
     attacks:
     - start: 8
       length: 3
@@ -244,19 +308,28 @@ MonoBehaviour:
     events:
     - start: 0
       end: 10
-      variable: 0.04
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.04
     - start: 10
       end: 10
-      variable: 0.1
+      active: 1
       script: 1
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.1
     - start: 5
       end: 5
-      variable: 0.25
+      active: 1
       script: 0
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.25
     attacks:
     - start: 8
       length: 7
@@ -342,9 +415,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -358,9 +434,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 15
-      variable: 14
+      active: 1
       script: 12
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 14
     attacks:
     - start: 8
       length: 7
@@ -386,9 +465,12 @@ MonoBehaviour:
     events:
     - start: 4
       end: 10
-      variable: 0.3
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.3
     attacks:
     - start: 8
       length: 7
@@ -414,9 +496,12 @@ MonoBehaviour:
     events:
     - start: 4
       end: 7
-      variable: 0.3
+      active: 1
       script: 10
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.3
     attacks:
     - start: 8
       length: 7
@@ -442,9 +527,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0
+      active: 1
       script: 11
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -458,9 +546,12 @@ MonoBehaviour:
     events:
     - start: 5
       end: 7
-      variable: -0.3
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: -0.3
     attacks:
     - start: 5
       length: 3
@@ -498,9 +589,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 20
-      variable: 0.05
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.05
     attacks:
     - start: 2
       length: 10
@@ -526,14 +620,20 @@ MonoBehaviour:
     events:
     - start: 0
       end: 20
-      variable: 0.05
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.05
     - start: 0
       end: 20
-      variable: -0.05
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: -0.05
     attacks:
     - start: 2
       length: 10
@@ -559,19 +659,28 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0.05
+      active: 1
       script: 9
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.05
     - start: 0
       end: 20
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     - start: 2
       end: 6
-      variable: 0.3
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.3
     attacks:
     - start: 2
       length: 10
@@ -597,19 +706,28 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0.05
+      active: 1
       script: 9
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.05
     - start: 0
       end: 20
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     - start: 2
       end: 6
-      variable: 0.3
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.3
     attacks:
     - start: 8
       length: 3
@@ -635,14 +753,20 @@ MonoBehaviour:
     events:
     - start: 3
       end: 5
-      variable: -0.5
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: -0.5
     - start: 3
       end: 5
-      variable: 0.5
+      active: 1
       script: 1
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.5
     attacks:
     - start: 8
       length: 3
@@ -668,9 +792,12 @@ MonoBehaviour:
     events:
     - start: 1
       end: 5
-      variable: 0
+      active: 1
       script: 0
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -684,9 +811,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0.05
+      active: 1
       script: 9
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.05
     attacks:
     - start: 8
       length: 3
@@ -712,9 +842,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0.05
+      active: 1
       script: 9
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.05
     attacks:
     - start: 8
       length: 3
@@ -740,9 +873,12 @@ MonoBehaviour:
     events:
     - start: 0
       end: 0
-      variable: 0.05
+      active: 1
       script: 9
       hasExecuted: 1
+      parameters:
+      - name: 
+        val: 0.05
     attacks:
     - start: 4
       length: 3
@@ -816,19 +952,28 @@ MonoBehaviour:
     events:
     - start: 0
       end: 20
-      variable: 0.03
+      active: 1
       script: 3
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.03
     - start: 2
       end: 20
-      variable: 1
+      active: 1
       script: 6
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 1
     - start: 0
       end: 20
-      variable: 1
+      active: 1
       script: 13
       hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0
     attacks: []
     jumpReq: 0
     meterReq: 0
@@ -837,32 +982,75 @@ MonoBehaviour:
   characterScripts:
   - index: 0
     name: Velocity Y
+    parameters:
+    - name: Pow
+      val: 0
   - index: 0
     name: Front Velocity
+    parameters:
+    - name: Pow
+      val: 0
   - index: 0
     name: Velocity XZ
+    parameters: []
   - index: 0
     name: Stick Move
+    parameters:
+    - name: Rate
+      val: 0
   - index: 0
     name: GettingHit
+    parameters:
+    - name: 
+      val: 0
   - index: 0
     name: GlobalPrefab
+    parameters:
+    - name: 
+      val: 0
   - index: 0
     name: CanCancel
+    parameters:
+    - name: Bool
+      val: 0
   - index: 0
     name: Jump
+    parameters:
+    - name: Pow
+      val: 0
   - index: 0
     name: Face Velocity
+    parameters: []
   - index: 0
     name: Face Stick
+    parameters:
+    - name: Rate
+      val: 0
   - index: 0
     name: Velocity To Target
+    parameters:
+    - name: Pow
+      val: 0
   - index: 0
     name: Invulnerable
+    parameters:
+    - name: Bool
+      val: 0
   - index: 0
     name: Hold Velocity
+    parameters:
+    - name: Window?
+      val: 0
   - index: 0
     name: Shoot
+    parameters:
+    - name: 
+      val: 0
+  - index: 0
+    name: Shoot
+    parameters:
+    - name: Pow
+      val: 0
   moveLists:
   - name: Unarmed
     commandStates:

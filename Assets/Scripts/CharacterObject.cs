@@ -441,18 +441,24 @@ public class CharacterObject : MonoBehaviour, IEffectable
             // <= here might fire things twice on first frame?
             // theres a better way to do this
             //if (prevStateTime <= _ev.start && currentStateTime == _ev.start)
-            if (!_ev.hasExecuted)
+
+            int _curEv = 0; // for use in future, globalprefab?
+            if (_ev.active)
             {
-                if (_ev.start == _ev.end && currentStateTime >= _ev.start)
+                if (!_ev.hasExecuted)
                 {
-                    DoEventScript(_ev.script, _ev.variable);
-                    _ev.hasExecuted = true;
-                }
-                if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
-                {
-                    DoEventScript(_ev.script, _ev.variable);
+                    if (_ev.start == _ev.end && currentStateTime >= _ev.start)
+                    {
+                        DoEventScript(_ev.script, _ev.parameters);
+                        _ev.hasExecuted = true;
+                    }
+                    if (currentStateTime >= _ev.start && currentStateTime <= _ev.end) // after the && is hacky
+                    {
+                        DoEventScript(_ev.script, _ev.parameters);
+                    }
                 }
             }
+            _curEv++;
         }
     }
 
@@ -517,48 +523,50 @@ public class CharacterObject : MonoBehaviour, IEffectable
         }
     }
 
-    void DoEventScript(int _index, float _var)
+    void DoEventScript(int _index, List<ScriptParameter> _params) // + actIndex + evIndex
     {
+        if (_params == null) { return; }
+        if (_params.Count <= 0) { return; }
         switch(_index)
         {
             case 0:
-                VelocityY(_var);
+                VelocityY(_params[0].val);
                 break;
             case 1:
-                FrontVelocity(_var);
+                FrontVelocity(_params[0].val);
                 break;
             case 3:
-                CameraRelativeStickMove(_var);
+                CameraRelativeStickMove(_params[0].val);
                 break;
             case 4:
                 GettingHit();
                 break;
             case 5:
-                GlobalPrefab(_var);
+                GlobalPrefab(_params[0].val);
                 break;
             case 6:
-                CanCancel(_var);
+                CanCancel(_params[0].val);
                 break;
             case 7:
-                Jump(_var);
+                Jump(_params[0].val);
                 break;
             case 8:
                 FaceVelocity();
                 break;
             case 9:
-                FaceStick(_var);
+                FaceStick(_params[0].val);
                 break;
             case 10:
-                VelocityToTarget(_var);
+                VelocityToTarget(_params[0].val);
                 break;
             case 11:
-                Invulnerable(_var);
+                Invulnerable(_params[0].val);
                 break;
             case 12:
-                HoldVelocity(_var);
+                HoldVelocity(_params[0].val);
                 break;
             case 13:
-                Shoot(_var);
+                Shoot(_params[0].val);
                 break;
         }
     }
