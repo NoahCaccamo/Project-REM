@@ -29,14 +29,14 @@ public class CharacterStateEditorWindow : EditorWindow
             }
         }
         scrollView = GUILayout.BeginScrollView(scrollView);
+        currentCharacterState = coreData.characterStates[currentStateIndex];
+
         GUILayout.BeginHorizontal();
         GUILayout.Label(currentStateIndex.ToString() + " : " + currentCharacterState.stateName, GUILayout.Width(200));
         currentStateIndex = EditorGUILayout.Popup(
             currentStateIndex, coreData.GetStateNames());
 
         if (GUILayout.Button("New Character State")) { coreData.characterStates.Add(new CharacterState()); currentStateIndex = coreData.characterStates.Count - 1; }
-
-        currentCharacterState = coreData.characterStates[currentStateIndex];
 
         GUILayout.EndHorizontal();
 
