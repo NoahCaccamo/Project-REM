@@ -67,6 +67,11 @@ public class CharacterStateEditorWindow : EditorWindow
                 currentEvent.active = EditorGUILayout.Toggle(currentEvent.active, GUILayout.Width(20));
                 GUILayout.Label(e.ToString() + " : ", GUILayout.Width(25));
                 EditorGUILayout.MinMaxSlider(ref currentEvent.start, ref currentEvent.end, 0f, currentCharacterState.length, GUILayout.Width(400));
+
+                // can remove the rounding if we want more precise timings
+                currentEvent.start = Mathf.Round(currentEvent.start);
+                currentEvent.end = Mathf.Round(currentEvent.end);
+
                 GUILayout.Label(Mathf.Round(currentEvent.start).ToString() + " ~ " + Mathf.Round(currentEvent.end).ToString(), GUILayout.Width(75));
                 currentEvent.script = EditorGUILayout.Popup(currentEvent.script, coreData.GetScriptNames());
                 GUILayout.EndHorizontal();
