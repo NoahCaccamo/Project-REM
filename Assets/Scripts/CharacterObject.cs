@@ -235,6 +235,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
             velHelp *= _val;
 
+            if (targeting) { velHelp *= 0.5f; }
+
             velocity += velHelp * Time.deltaTime * 60 * localTimescale;
         }
     }
