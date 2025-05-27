@@ -664,12 +664,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void HoldVelocity(float _val)
     {
         //playerInputBuffer.buffer[b].rawInputs[i].used
-        if (inputBuffer.buffer[24].rawInputs[1].hold >= _val && prevHold < _val)
+        // HARD CODED
+        // CAN WE PASS INPUT USED OR SOMETHING?
+        if (inputBuffer.buffer[24].rawInputs[3].hold >= _val && prevHold < _val)
         {
             velocity.y = 0.4f;
         }
 
-        prevHold = inputBuffer.buffer[24].rawInputs[1].hold;
+        prevHold = inputBuffer.buffer[24].rawInputs[3].hold;
     }
 
     void Shoot(float _pow)
