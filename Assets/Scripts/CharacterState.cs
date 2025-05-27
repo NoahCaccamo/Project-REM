@@ -104,11 +104,26 @@ public class CharacterScript
 [System.Serializable]
 public class InputCommand
 {
+    public enum InputCommandType
+    {
+        RawInput,
+        Motion,
+        Hold,
+        Delay,
+        Mash,
+        TargetingDirectional
+    }
+
+    public InputCommandType inputType;
+
     [IndexedItem(IndexedItemAttribute.IndexedItemType.MOTION_COMMAND)]
     public int motionCommand;
 
     [IndexedItem(IndexedItemAttribute.IndexedItemType.RAW_INPUTS)]
     public int input;
+
+    public int framesRequired;
+    public int mashCount;
 
     [IndexedItem(IndexedItemAttribute.IndexedItemType.STATES)]
     public int state;

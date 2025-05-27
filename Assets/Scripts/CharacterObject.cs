@@ -953,9 +953,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
 
     public bool CheckInputCommand(InputCommand _in)
-    {
-        if (inputBuffer.buttonCommandCheck[_in.input] < 0) { return false; }
-        if (inputBuffer.motionCommandCheck[_in.motionCommand] < 0) { return false; }
+    {       
+        // new
+        return inputBuffer.CheckCommand(_in);
+        // OLD
+        if (_in.inputType == InputCommand.InputCommandType.Motion)
+        {
+            if (inputBuffer.buttonCommandCheck[_in.input] < 0) { return false; }
+            if (inputBuffer.motionCommandCheck[_in.motionCommand] < 0) { return false; }
+        }
         return true;
     }
 

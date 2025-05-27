@@ -225,6 +225,78 @@ public class InputBuffer
             else { hold = 0;  }
         }
     }
+
+    public bool CheckCommand(InputCommand command)
+    {
+        switch (command.inputType)
+        {
+            case InputCommand.InputCommandType.Motion:
+                if (buttonCommandCheck[command.input] < 0) { return false; }
+                if (motionCommandCheck[command.motionCommand] < 0) { return false; }
+                return motionCommandCheck[command.motionCommand] >= 0;
+
+            case InputCommand.InputCommandType.RawInput:
+                return buttonCommandCheck[command.input] >= 0 &&
+                       buffer[buttonCommandCheck[command.input]].rawInputs[command.input].CanExecute();
+
+            case InputCommand.InputCommandType.Hold:
+                return buffer[buffer.Count - 1].rawInputs[command.input].hold >= command.framesRequired;
+
+
+            case InputCommand.InputCommandType.Delay:
+                {
+                    // Step 1: Find most recent input execution
+                    int lastFrameIndex = -1;
+                    for (int i = buffer.Count - 1; i >= 0; i--)
+                    {
+                        if (buffer[i].rawInputs[command.input].used)
+                        {
+                            lastFrameIndex = i;
+                            break;
+                        }
+                    }
+
+                    // Step 2: Ensure enough frames have passed
+                    int currentIndex = buffer.Count - 1;
+                    if (lastFrameIndex >= 0 &&
+                        currentIndex - lastFrameIndex < command.framesRequired)
+                        return false;
+
+                    // Step 3: Check if the button is freshly pressed now
+                    return buffer[currentIndex].rawInputs[command.input].CanExecute();
+                }
+
+            case InputCommand.InputCommandType.Mash:
+                int pressCount = 0;
+                foreach (var b in buffer)
+                {
+                    if (b.rawInputs[command.input].CanExecute())
+                        pressCount++;
+                }
+                return pressCount >= command.mashCount;
+
+            case InputCommand.InputCommandType.TargetingDirectional:
+                if (!GameEngine.gameEngine.mainCharacter.targeting)
+                {
+                    return false;
+                }
+                int idx = buttonCommandCheck[command.input];
+                if (idx < 0) return false;
+
+                var inputFrame = buffer[idx];
+                float x = inputFrame.rawInputs[4].value;
+                float y = inputFrame.rawInputs[5].value;
+
+                MotionCommand.MotionCommandDirection dir =
+                    GameEngine.coreData.motionCommands[command.motionCommand].GetNumPadDirection(x, y);
+
+                return dir == GameEngine.coreData.motionCommands[command.motionCommand].commands[0];
+
+
+            default:
+                return false;
+        }
+    }
 }
 
 public class InputBufferFrame
