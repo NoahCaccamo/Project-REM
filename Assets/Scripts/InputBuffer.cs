@@ -106,6 +106,13 @@ public class InputBuffer
 
     public void UseInput(int _i)
     {
+        if (buttonCommandCheck[_i] == -1)
+        {
+            // this happens on hold input since its already used
+            // figure out a better thing to do here maybe? or other way to handle it.
+            Debug.Log("NO BUTTON COMMAND");
+            return;
+        }
         buffer[buttonCommandCheck[_i]].rawInputs[_i].used = true;
 
         buttonCommandCheck[_i] = -1;
