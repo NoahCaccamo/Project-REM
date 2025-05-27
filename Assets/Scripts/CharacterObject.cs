@@ -785,6 +785,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
 
     int[] cancelStepList = new int[2];
+    float commandTimeoutTimer = 0;
+    float commandTimeoutDuration = 60f;
 
     void UpdateInput()
     {
@@ -822,7 +824,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
         GetCommandState();
         CommandState comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
 
+        commandTimeoutTimer += Time.deltaTime * 60;
+
         if (currentCommandStep >= comState.commandSteps.Count) { currentCommandStep = 0; } // Change this to state specific or even commandstep specific variables
+        if (commandTimeoutTimer >= commandTimeoutDuration) { currentCommandStep = 0; commandTimeoutTimer = 0; }
 
         cancelStepList[0] = currentCommandStep;
         cancelStepList[1] = 0;
@@ -863,6 +868,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (startState)
         {
+            commandTimeoutTimer = 0f;
+
             CommandStep nextStep = comState.commandSteps[comState.commandSteps[cancelStepList[finalS]].followUps[finalF]];
             InputCommand nextCommand = nextStep.command;
             inputBuffer.UseInput(nextCommand.input);
