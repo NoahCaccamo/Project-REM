@@ -194,17 +194,27 @@ public class ChainEditorWindow : EditorWindow
 
         switch (currentCommandStateObject.commandSteps[windowID].command.inputType)
         {
-            case InputCommand.InputCommandType.Motion | InputCommand.InputCommandType.TargetingDirectional:
+            case InputCommand.InputCommandType.Motion:
                 currentCommandStateObject.commandSteps[windowID].command.motionCommand = 
+                    EditorGUI.IntPopup(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
+                break;
+            case InputCommand.InputCommandType.TargetingDirectional:
+                currentCommandStateObject.commandSteps[windowID].command.motionCommand =
                     EditorGUI.IntPopup(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
                 break;
 
             case InputCommand.InputCommandType.RawInput:
                 break;
-            case InputCommand.InputCommandType.Hold | InputCommand.InputCommandType.Delay:
+            case InputCommand.InputCommandType.Hold:
                 currentCommandStateObject.commandSteps[windowID].command.framesRequired =
                     EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.framesRequired);
                 break;
+            case InputCommand.InputCommandType.Delay:
+                currentCommandStateObject.commandSteps[windowID].command.framesRequired =
+                    EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.framesRequired);
+                break;
+
+
             case InputCommand.InputCommandType.Mash:
                 currentCommandStateObject.commandSteps[windowID].command.mashCount =
                     EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.mashCount);
