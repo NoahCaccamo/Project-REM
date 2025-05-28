@@ -1243,11 +1243,11 @@ MonoBehaviour:
   - inputType: 0
     name: Jump
   - inputType: 0
+    name: Shoot
+  - inputType: 0
+    name: Utility
+  - inputType: 0
     name: Slash
-  - inputType: 0
-    name: Dash
-  - inputType: 0
-    name: Slash2
   - inputType: 1
     name: Horizontal
   - inputType: 1
