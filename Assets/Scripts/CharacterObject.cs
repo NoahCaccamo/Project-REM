@@ -102,10 +102,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 armorHealth = enemyData.maxArmor;
             }
 
-            targetable = LayerMask.GetMask("Player");
+            enemyLayerMask = LayerMask.GetMask("Player");
         } else
         {
-            targetable = LayerMask.GetMask("Enemy");
+            enemyLayerMask = LayerMask.GetMask("Enemy");
         }
     }
 
@@ -160,6 +160,128 @@ public class CharacterObject : MonoBehaviour, IEffectable
         }
         UpdateTimers();
         UpdateAnimation();
+    }
+
+    void LateUpdate()
+    {
+        if (controlType == ControlType.PLAYER)
+        {
+            ResolveEnemyOverlap();
+            ManualPushback();
+        }
+    }
+
+    bool IsPushingEnemy(Vector3 moveDir)
+    {
+        RaycastHit hit;
+        return Physics.SphereCast(transform.position, 0.4f, moveDir, out hit, 0.45f, enemyLayerMask);
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+
+        Gizmos.DrawWireSphere(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), 0.6f);
+        Gizmos.DrawWireSphere(new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f);
+
+        Gizmos.color = Color.blue;
+
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * 0.5f, 0.45f);
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * 1.5f, 0.45f);
+
+    }
+
+    private void ManualPushback()
+    {
+        Collider[] hits = Physics.OverlapCapsule(
+    transform.position + Vector3.up * 0.5f,
+    new Vector3(transform.position.x, transform.position.y, transform.position.z),
+    0.45f,
+    enemyLayerMask
+);
+
+        foreach (var hit in hits)
+        {
+            Vector3 toPlayer = transform.position - hit.transform.position;
+            toPlayer.y = 0;
+            float distance = toPlayer.magnitude;
+            float pushDistance = 0.8f; // Desired minimum spacing
+
+            if (distance < pushDistance && distance > 0.01f)
+            {
+                Vector3 pushDir = toPlayer.normalized;
+                float correction = pushDistance - distance;
+
+                // Push the player back
+                myController.Move(pushDir * correction);
+                // Enemy
+                if (hit.TryGetComponent<CharacterObject>(out var enemy))
+                {
+                    enemy.velocity += -pushDir * correction * 0.2f;
+                }
+
+            }
+        }
+
+    }
+
+    private void ResolveEnemyOverlap2()
+    {
+        Collider[] overlaps = Physics.OverlapCapsule(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f, enemyLayerMask);
+
+        foreach (var col in overlaps)
+        {
+            Vector3 toEnemy = transform.position - col.transform.position;
+
+
+            // raycast instead??
+            bool isAbove = toEnemy.y > 0.3f; // Tweak this threshold
+
+            if (isAbove)
+            {
+                Vector3 horizontalPush = new Vector3(toEnemy.x, 0, toEnemy.z).normalized * 0.05f;
+                myController.Move(horizontalPush);
+            }
+
+        }
+    }
+
+
+
+
+    // may need to clamp enemy velocity or use vector3 smoothdamp if jerky
+    private void ResolveEnemyOverlap()
+    {
+        Collider[] overlaps = Physics.OverlapCapsule(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f, enemyLayerMask);
+
+        foreach (var col in overlaps)
+        {
+            if (col.TryGetComponent<CharacterObject>(out var enemy))
+            {
+                Vector3 offset =  transform.position - col.transform.position;
+                float verticalDiff = offset.y;
+                Vector3 horizontalOffset = new Vector3(offset.x, 0f, offset.z);
+
+                // handled in other function now
+                /*
+                // Push enemy sideways if player is not directly above
+                if (Mathf.Abs(verticalDiff) < 1.0f) // Rough check for "not above"
+                {
+                    Vector3 pushDir = -horizontalOffset.normalized;
+
+                    // Slight push force
+                    enemy.velocity += pushDir * 0.03f;
+                }
+                */
+
+                // If player is above (falling on enemy), push player off
+                if (verticalDiff > 0.3f)
+                {
+                    Vector3 shoveDir = horizontalOffset.normalized;
+                    myController.Move(shoveDir * 0.08f);
+                }
+            }
+        }
     }
 
     void UpdateTimers()
@@ -236,6 +358,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
             velHelp *= _val;
 
             if (targeting) { velHelp *= 0.5f; }
+
+            if (IsPushingEnemy(velHelp)) { velHelp *= 0.5f; } // used to be 0.3
 
             velocity += velHelp * Time.deltaTime * 60 * localTimescale;
         }
@@ -570,7 +694,17 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 13:
                 Shoot(_params[0].val);
                 break;
+            case 14:
+                EnemyStep(_params[0].val);
+                break;
         }
+    }
+
+    void EnemyStep(float _pow)
+    {
+        // RESET AIR ACTIONS FUNCTION HERE
+        jumps = jumpMax;
+        velocity.y = _pow;
     }
 
     void VelocityToTarget(float _pow)
@@ -764,6 +898,21 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     }
 
+    public bool IsEnemyCloseToFeet()
+    {
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position - Vector3.down * 0.4f, 2f, enemyLayerMask);
+        foreach (Collider hitEnemy in hitEnemies)
+        {
+            // check if you can step?
+
+        }
+        if (hitEnemies.Length > 0)
+        {
+            return true;
+        }
+        return false;
+    }
+
     void SetAnimation(string aniName)
     {
         //myAnimator.CrossFadeInFixedTime(aniName, 0.1f);
@@ -902,11 +1051,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
 
 
-    LayerMask targetable;
+    LayerMask enemyLayerMask;
     public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
-        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, targetable);
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, enemyLayerMask);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
 

@@ -30,6 +30,7 @@ public class CharacterState
     public int meterReq;
     public float dashCooldownReq;
     public bool groundedReq;
+    public bool proximityReq;
 
     public bool ConditionsMet(CharacterObject chara)
     {
@@ -49,6 +50,11 @@ public class CharacterState
         {
             if (chara.specialMeter < meterReq) { return false; }
             else { chara.UseMeter(meterReq); }
+        }
+
+        if (proximityReq)
+        {
+            if (!chara.IsEnemyCloseToFeet()) { return false; }
         }
 
         // else { chara.jumps--; } // move out later if we implement prio or use jump for something else
