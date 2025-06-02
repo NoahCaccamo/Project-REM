@@ -102,10 +102,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 armorHealth = enemyData.maxArmor;
             }
 
-            targetable = LayerMask.GetMask("Player");
+            enemyLayerMask = LayerMask.GetMask("Player");
         } else
         {
-            targetable = LayerMask.GetMask("Enemy");
+            enemyLayerMask = LayerMask.GetMask("Enemy");
         }
     }
 
@@ -162,6 +162,128 @@ public class CharacterObject : MonoBehaviour, IEffectable
         UpdateAnimation();
     }
 
+    void LateUpdate()
+    {
+        if (controlType == ControlType.PLAYER)
+        {
+            ResolveEnemyOverlap();
+            ManualPushback();
+        }
+    }
+
+    bool IsPushingEnemy(Vector3 moveDir)
+    {
+        RaycastHit hit;
+        return Physics.SphereCast(transform.position, 0.4f, moveDir, out hit, 0.45f, enemyLayerMask);
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+
+        Gizmos.DrawWireSphere(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), 0.6f);
+        Gizmos.DrawWireSphere(new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f);
+
+        Gizmos.color = Color.blue;
+
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * 0.5f, 0.45f);
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * 1.5f, 0.45f);
+
+    }
+
+    private void ManualPushback()
+    {
+        Collider[] hits = Physics.OverlapCapsule(
+    transform.position + Vector3.up * 0.5f,
+    new Vector3(transform.position.x, transform.position.y, transform.position.z),
+    0.45f,
+    enemyLayerMask
+);
+
+        foreach (var hit in hits)
+        {
+            Vector3 toPlayer = transform.position - hit.transform.position;
+            toPlayer.y = 0;
+            float distance = toPlayer.magnitude;
+            float pushDistance = 0.8f; // Desired minimum spacing
+
+            if (distance < pushDistance && distance > 0.01f)
+            {
+                Vector3 pushDir = toPlayer.normalized;
+                float correction = pushDistance - distance;
+
+                // Push the player back
+                myController.Move(pushDir * correction);
+                // Enemy
+                if (hit.TryGetComponent<CharacterObject>(out var enemy))
+                {
+                    enemy.velocity += -pushDir * correction * 0.2f;
+                }
+
+            }
+        }
+
+    }
+
+    private void ResolveEnemyOverlap2()
+    {
+        Collider[] overlaps = Physics.OverlapCapsule(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f, enemyLayerMask);
+
+        foreach (var col in overlaps)
+        {
+            Vector3 toEnemy = transform.position - col.transform.position;
+
+
+            // raycast instead??
+            bool isAbove = toEnemy.y > 0.3f; // Tweak this threshold
+
+            if (isAbove)
+            {
+                Vector3 horizontalPush = new Vector3(toEnemy.x, 0, toEnemy.z).normalized * 0.05f;
+                myController.Move(horizontalPush);
+            }
+
+        }
+    }
+
+
+
+
+    // may need to clamp enemy velocity or use vector3 smoothdamp if jerky
+    private void ResolveEnemyOverlap()
+    {
+        Collider[] overlaps = Physics.OverlapCapsule(new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z), new Vector3(transform.position.x, transform.position.y - 0.6f, transform.position.z), 0.6f, enemyLayerMask);
+
+        foreach (var col in overlaps)
+        {
+            if (col.TryGetComponent<CharacterObject>(out var enemy))
+            {
+                Vector3 offset =  transform.position - col.transform.position;
+                float verticalDiff = offset.y;
+                Vector3 horizontalOffset = new Vector3(offset.x, 0f, offset.z);
+
+                // handled in other function now
+                /*
+                // Push enemy sideways if player is not directly above
+                if (Mathf.Abs(verticalDiff) < 1.0f) // Rough check for "not above"
+                {
+                    Vector3 pushDir = -horizontalOffset.normalized;
+
+                    // Slight push force
+                    enemy.velocity += pushDir * 0.03f;
+                }
+                */
+
+                // If player is above (falling on enemy), push player off
+                if (verticalDiff > 0.3f)
+                {
+                    Vector3 shoveDir = horizontalOffset.normalized;
+                    myController.Move(shoveDir * 0.08f);
+                }
+            }
+        }
+    }
+
     void UpdateTimers()
     {
         if (dashCooldown > 0) { dashCooldown -= dashCooldownRate * 60 * Time.deltaTime * localTimescale; }
@@ -181,6 +303,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 ExitOverclocked();
             }
         }
+        if (noGrav > 0) { noGrav -= Time.deltaTime * 60 * localTimescale; }
     }
 
     void ExitOverclocked()
@@ -234,6 +357,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
 
             velHelp *= _val;
+
+            if (targeting) { velHelp *= 0.5f; }
+
+            if (IsPushingEnemy(velHelp)) { velHelp *= 0.5f; } // used to be 0.3
 
             velocity += velHelp * Time.deltaTime * 60 * localTimescale;
         }
@@ -364,7 +491,122 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 FaceVelocity();
             }
         }
+
+        CheckForLedge();
     }
+
+
+    float ledgeGrabForwardCheck = 1.5f;
+    float ledgeGrabUpCheck = 1.2f;
+    float ledgeGrabDownCheck = 2.5f;
+    Vector3 ledgeGrabOffset;
+
+    bool isGrabbingLedge = false;
+    Vector3 ledgeGrabPoint;
+
+
+
+    void CheckForLedge()
+    {
+        if (!aerialFlag || velocity.y > 0 || isGrabbingLedge)
+            return;
+
+
+        RaycastHit downHit;
+        Vector3 lineDownStart = (transform.position + Vector3.up * 1.5f) + character.transform.forward;
+        Vector3 lineDownEnd = (transform.position + Vector3.up * 0.7f) + character.transform.forward;
+        Physics.Linecast(lineDownStart, lineDownEnd, out downHit, wallLayerMask);
+        Debug.DrawLine(lineDownStart, lineDownEnd);
+
+        if (downHit.collider != null)
+        {
+            RaycastHit fwdHit;
+            Vector3 lineFwdStart = new Vector3(transform.position.x, downHit.point.y - 0.1f, transform.position.z);
+            Vector3 LineFwdEnd = new Vector3(transform.position.x, downHit.point.y-0.1f, transform.position.z) + character.transform.forward;
+            Physics.Linecast(lineFwdStart, LineFwdEnd, out fwdHit, wallLayerMask);
+            Debug.DrawLine(lineFwdStart, LineFwdEnd);
+
+            if (fwdHit.collider != null)
+            {
+                noGrav = 10;
+                velocity = Vector3.zero;
+
+                isGrabbingLedge = true;
+
+                Vector3 hangPos = new Vector3(fwdHit.point.x, fwdHit.point.y, fwdHit.point.z);
+                Vector3 offset = character.transform.forward * -0.1f + transform.up * -1f;
+                hangPos += offset;
+                transform.position = hangPos;
+                character.transform.forward = -fwdHit.normal;
+
+                StartLedgeGrab();
+            }
+        }
+    }
+
+
+    // GO INTO SPECIFIC STATE
+    void StartLedgeGrab()
+    {
+        // RESET AERIAL STUFF
+        jumps = jumpMax;
+        isGrabbingLedge = true;
+        velocity = Vector3.zero;
+
+        // limit rotation to y axis only
+
+        // Position player at ledge
+       // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+
+
+        StartState(27); // ledge grab state
+        // play animation based on state
+    }
+
+
+    // Still needs to handle getting hit out of ledge grab
+    // Also maybe I should lock the player position in case anything nudges the player while hanging
+    void LedgeGrab()
+    {
+        // uneeded cause of state or needed for lockout timer?
+        if (!isGrabbingLedge) return;
+
+        // uneeded??? maybe???
+        // Disable horizontal movement and gravity
+        // velocity = Vector3.zero;
+        // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+
+        // Wait for player input
+        if (Input.GetButtonDown("Jump"))
+        {
+            ClimbUpLedge();
+        }
+        /*
+        else if (Input.GetButtonDown("Crouch"))
+        {
+            DropFromLedge();
+        }
+        */
+    }
+
+    void ClimbUpLedge()
+    {
+        isGrabbingLedge = false;
+        // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+        StartState(0);// neutral
+        velocity.y = 0.45f;
+        // Jump(0.45f);
+    }
+
+    void DropFromLedge()
+    {
+        isGrabbingLedge = false;
+        noGrav = 0;
+    }
+
+
+
+
 
     void UpdateState()
     {
@@ -568,7 +810,31 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 13:
                 Shoot(_params[0].val);
                 break;
+            case 14:
+                EnemyStep(_params[0].val);
+                break;
+            case 15:
+                LedgeGrab();
+                break;
+            case 16:
+                NoGrav(_params[0].val);
+                break;
+            case 17:
+                Jumping(_params[0].val, _params[1].val);
+                break;
         }
+    }
+
+    void NoGrav(float _timer)
+    {
+        noGrav = _timer;
+    }
+
+    void EnemyStep(float _pow)
+    {
+        // RESET AIR ACTIONS FUNCTION HERE
+        jumps = jumpMax;
+        velocity.y = _pow;
     }
 
     void VelocityToTarget(float _pow)
@@ -613,6 +879,19 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         velocity.y = _pow;
         jumps--;
+    }
+
+    void Jumping(float _pow, float _inputIndex)
+    {
+        if (controlType == ControlType.AI)
+        {
+            return;
+        }
+        int idx = Mathf.RoundToInt(_inputIndex);
+        if (inputBuffer.buffer[24].rawInputs[idx].hold > 1)
+        {
+            velocity.y += _pow * Time.deltaTime * 60 * localTimescale;
+        }
     }
 
     void CanCancel(float _val)
@@ -664,12 +943,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void HoldVelocity(float _val)
     {
         //playerInputBuffer.buffer[b].rawInputs[i].used
-        if (inputBuffer.buffer[24].rawInputs[1].hold >= _val && prevHold < _val)
+        // HARD CODED
+        // CAN WE PASS INPUT USED OR SOMETHING?
+        if (inputBuffer.buffer[24].rawInputs[3].hold >= _val && prevHold < _val)
         {
             velocity.y = 0.4f;
         }
 
-        prevHold = inputBuffer.buffer[24].rawInputs[1].hold;
+        prevHold = inputBuffer.buffer[24].rawInputs[3].hold;
     }
 
     void Shoot(float _pow)
@@ -739,11 +1020,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (hitStun <= 0 && !targeting ) { FaceStick(1); faceStick = false; }
 
+        // BUGGY AF
+        // FIX THIS
+        /*
         if (softTarget)
         {
             FaceTarget(softTarget.gameObject.transform.position);
             faceStick = false;
         }
+        */
     }
 
     // externally called from enemy
@@ -758,6 +1043,21 @@ public class CharacterObject : MonoBehaviour, IEffectable
     void OnEnteringState(int _newState)
     {
 
+    }
+
+    public bool IsEnemyCloseToFeet()
+    {
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position - Vector3.down * 0.4f, 2f, enemyLayerMask);
+        foreach (Collider hitEnemy in hitEnemies)
+        {
+            // check if you can step?
+
+        }
+        if (hitEnemies.Length > 0)
+        {
+            return true;
+        }
+        return false;
     }
 
     void SetAnimation(string aniName)
@@ -785,6 +1085,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
 
     int[] cancelStepList = new int[2];
+    float commandTimeoutTimer = 0;
+    float commandTimeoutDuration = 60f;
 
     void UpdateInput()
     {
@@ -822,7 +1124,10 @@ public class CharacterObject : MonoBehaviour, IEffectable
         GetCommandState();
         CommandState comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
 
+        commandTimeoutTimer += Time.deltaTime * 60;
+
         if (currentCommandStep >= comState.commandSteps.Count) { currentCommandStep = 0; } // Change this to state specific or even commandstep specific variables
+        if (commandTimeoutTimer >= commandTimeoutDuration) { currentCommandStep = 0; commandTimeoutTimer = 0; }
 
         cancelStepList[0] = currentCommandStep;
         cancelStepList[1] = 0;
@@ -863,6 +1168,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (startState)
         {
+            commandTimeoutTimer = 0f;
+
             CommandStep nextStep = comState.commandSteps[comState.commandSteps[cancelStepList[finalS]].followUps[finalF]];
             InputCommand nextCommand = nextStep.command;
             inputBuffer.UseInput(nextCommand.input);
@@ -870,92 +1177,18 @@ public class CharacterObject : MonoBehaviour, IEffectable
             else { currentCommandStep = 0; }
             StartState(nextCommand.state);
         }
-
-                // OLD INPUT BUFFER STUFF
-
-                /*
-                if (startState) { break; }
-                foreach (InputBufferItem bItem in inputBuffer.inputList)
-                {
-                    if (startState) { break; }
-                    foreach (InputStateItem bState in bItem.buffer)
-                    {
-                        if (stepCommand.input == bItem.button)
-                        {
-                            if (bState.CanExecute())
-                            {
-                                if (canCancel)
-                                {
-                                    if (GameEngine.coreData.characterStates[stepCommand.state].ConditionsMet(this))
-                                    {
-                                        startState = true;
-                                        bState.used = true;
-
-                                        if (nextStep.followUps.Count > 0) { currentCommandStep = nextStep.idIndex; }
-                                        else { currentCommandStep = 0; }
-                                        Debug.Log("Current Step: " + currentCommandStep);
-                                        StartState(stepCommand.state);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                
-                }
-                */
-
-        /*
-        foreach (InputCommand c in GameEngine.coreData.commands)
-        {
-
-        }
-        */
-
-            /*
-            if (c.inputString != "")
-            {
-                if (Input.GetButtonDown(GameEngine.coreData.commands[c].inputString))
-                {
-                    if (canCancel)
-                    {
-                        print(GameEngine.coreData.commands[c].state);
-                        StartState(GameEngine.coreData.commands[c].state);
-                        break;
-                    }
-                    // Continue from here!
-                    // --> Hold state until out of command list and then check if you can Cancel or not
-                }
-            }
-            */
-
-            //for (int c = 0; c < GameEngine.coreData.commands.Count; c++) // (InputCommand c in GameEngine.coreData.commands)
-            //{
-            //    if (GameEngine.coreData.commands[c].inputString != "")
-            //    {
-            //        // wack have to line up order here. bad. fix
-            //        for (int b = 0; b < inputBuffer.inputList[c].buffer.Count; b++)
-            //        {
-            //            if (Input.GetButtonDown(GameEngine.coreData.commands[c].inputString))
-            //            {
-            //                if (canCancel)
-            //                {
-            //                    print(GameEngine.coreData.commands[c].state);
-            //                    StartState(GameEngine.coreData.commands[c].state);
-            //                    break;
-            //                }
-            //                // Continue from here!
-            //                // --> Hold state until out of command list and then check if you can Cancel or not
-            //            }
-            //        }
-            //    }
-            //}
     }
 
     public bool CheckInputCommand(InputCommand _in)
-    {
-        if (inputBuffer.buttonCommandCheck[_in.input] < 0) { return false; }
-        if (inputBuffer.motionCommandCheck[_in.motionCommand] < 0) { return false; }
+    {       
+        // new
+        return inputBuffer.CheckCommand(_in);
+        // OLD
+        if (_in.inputType == InputCommand.InputCommandType.Motion)
+        {
+            if (inputBuffer.buttonCommandCheck[_in.input] < 0) { return false; }
+            if (inputBuffer.motionCommandCheck[_in.motionCommand] < 0) { return false; }
+        }
         return true;
     }
 
@@ -965,11 +1198,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
     }
 
 
-    LayerMask targetable;
+    LayerMask enemyLayerMask;
     public GameObject TargetClosestEnemy()
     {
         // HARDCODED LAYERMASK HERE BAD AAH 128 = 7 = Enemy
-        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, targetable);
+        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position + character.transform.forward, 20f, enemyLayerMask);
         GameObject closestEnemy = null;
         float shortestDist = Mathf.Infinity;
 
@@ -1152,7 +1385,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public void GettingHit()
     {
         hitStun -= Time.deltaTime * 60 * localTimescale;
-        noGrav -= Time.deltaTime * 60 * localTimescale;
+
         if (hitStun <= 0) { EndState(); }
 
         // Wall Slump

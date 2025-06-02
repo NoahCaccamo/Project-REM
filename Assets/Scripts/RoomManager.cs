@@ -32,8 +32,6 @@ public class RoomManager : MonoBehaviour
                     listOfOpponents.AddRange(GameObject.FindGameObjectsWithTag("Enemy"));
 
                     challengeIsActive = true;
-
-                    print(listOfOpponents.Count);
                 }
             }
         }

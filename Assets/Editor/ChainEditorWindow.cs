@@ -147,13 +147,13 @@ public class ChainEditorWindow : EditorWindow
             BeginWindows();
             sizerStep = 30;
 
-        GUI.backgroundColor = Color.red;
+        GUI.backgroundColor = Color.white;
             int cCounter = 0;
             foreach (CommandStep c in currentCommandStateObject.commandSteps)
             {
                 if (c.activated && cCounter > drawBase)
                 {
-                    c.myRect = GUI.Window(c.idIndex, c.myRect, WindowFunction, "", EditorStyles.miniButton);
+                    c.myRect = GUI.Window(c.idIndex, c.myRect, WindowFunction, "");
                 }
                 cCounter++;
             }
@@ -172,25 +172,59 @@ public class ChainEditorWindow : EditorWindow
             if (currentCommandStateIndex >= currentMovelist.commandStates.Count) { currentCommandStateIndex = 0; }
             if (windowID >= currentCommandStateObject.commandSteps.Count) { return; }
             currentCommandStateObject.commandSteps[windowID].myRect.width = 175;
-            currentCommandStateObject.commandSteps[windowID].myRect.height = 50;
+            currentCommandStateObject.commandSteps[windowID].myRect.height = 80;
 
-            EditorGUI.LabelField(new Rect(6, 7, 35, 20), windowID.ToString());
+            EditorGUI.LabelField(new Rect(6, 27, 35, 20), windowID.ToString());
 
+        /*
             currentCommandStateObject.commandSteps[windowID].command.motionCommand =
-                EditorGUI.IntPopup(new Rect(25, 5, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
-
+                EditorGUI.IntPopup(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
+        */
             currentCommandStateObject.commandSteps[windowID].command.input =
-                EditorGUI.IntPopup(new Rect(75, 5, 65, 20), currentCommandStateObject.commandSteps[windowID].command.input, coreData.GetRawInputNames(), null, EditorStyles.miniButtonRight);
+                EditorGUI.IntPopup(new Rect(75, 25, 65, 20), currentCommandStateObject.commandSteps[windowID].command.input, coreData.GetRawInputNames(), null, EditorStyles.miniButtonRight);
         currentCommandStateObject.commandSteps[windowID].command.state =
-                EditorGUI.IntPopup(new Rect(40, 26, 70, 20), currentCommandStateObject.commandSteps[windowID].command.state, coreData.GetStateNames(), null, EditorStyles.miniButtonLeft);
+                EditorGUI.IntPopup(new Rect(40, 46, 70, 20), currentCommandStateObject.commandSteps[windowID].command.state, coreData.GetStateNames(), null, EditorStyles.miniButtonLeft);
 
         currentCommandStateObject.commandSteps[windowID].priority =
-            EditorGUI.IntField(new Rect(6, 26, 20, 20), currentCommandStateObject.commandSteps[windowID].priority);
+            EditorGUI.IntField(new Rect(6, 46, 20, 20), currentCommandStateObject.commandSteps[windowID].priority);
+
+        currentCommandStateObject.commandSteps[windowID].command.inputType = (InputCommand.InputCommandType)EditorGUI.EnumPopup(
+    new Rect(16, 0, 70, 20), currentCommandStateObject.commandSteps[windowID].command.inputType, EditorStyles.miniButtonLeft);
+
+
+        switch (currentCommandStateObject.commandSteps[windowID].command.inputType)
+        {
+            case InputCommand.InputCommandType.Motion:
+                currentCommandStateObject.commandSteps[windowID].command.motionCommand = 
+                    EditorGUI.IntPopup(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
+                break;
+            case InputCommand.InputCommandType.TargetingDirectional:
+                currentCommandStateObject.commandSteps[windowID].command.motionCommand =
+                    EditorGUI.IntPopup(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.motionCommand, coreData.GetMotionCommandNames(), null, EditorStyles.miniButtonLeft);
+                break;
+
+            case InputCommand.InputCommandType.RawInput:
+                break;
+            case InputCommand.InputCommandType.Hold:
+                currentCommandStateObject.commandSteps[windowID].command.framesRequired =
+                    EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.framesRequired);
+                break;
+            case InputCommand.InputCommandType.Delay:
+                currentCommandStateObject.commandSteps[windowID].command.framesRequired =
+                    EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.framesRequired);
+                break;
+
+
+            case InputCommand.InputCommandType.Mash:
+                currentCommandStateObject.commandSteps[windowID].command.mashCount =
+                    EditorGUI.IntField(new Rect(25, 25, 50, 20), currentCommandStateObject.commandSteps[windowID].command.mashCount);
+                break;
+        }
 
 
 
-            int nextFollowup = -1;
-            nextFollowup = EditorGUI.IntPopup(new Rect(150, 15, 21, 20), nextFollowup, coreData.GetFollowUpNames(currentCommandStateIndex, true), null, EditorStyles.miniButton);
+        int nextFollowup = -1;
+            nextFollowup = EditorGUI.IntPopup(new Rect(150, 30, 21, 20), nextFollowup, coreData.GetFollowUpNames(currentCommandStateIndex, true), null, EditorStyles.miniButton);
 
             if (nextFollowup != -1)
             {
