@@ -472,7 +472,7 @@ MonoBehaviour:
       hitboxScale: {x: 2.32, y: 2.8770218, z: 3.3}
       cancelWindow: 8
       playerBoost: 0
-      hitActive: 0
+      hitActive: 7
       statusData: {fileID: 0}
     jumpReq: 0
     meterReq: 0
@@ -972,7 +972,7 @@ MonoBehaviour:
       hitboxScale: {x: 2.02, y: 1.4, z: 2.73}
       cancelWindow: 28
       playerBoost: 0
-      hitActive: 0
+      hitActive: 19
       statusData: {fileID: 0}
     jumpReq: 0
     meterReq: 0
@@ -1273,7 +1273,7 @@ MonoBehaviour:
           inputType: 3
           motionCommand: 0
           input: 3
-          framesRequired: 15
+          framesRequired: 13
           mashCount: 0
           state: 24
           inputs: 
@@ -1293,7 +1293,7 @@ MonoBehaviour:
           motionCommand: 0
           input: 3
           framesRequired: 0
-          mashCount: 3
+          mashCount: 2
           state: 24
           inputs: 
         priority: 2
@@ -1396,17 +1396,17 @@ MonoBehaviour:
         strict: 0
         myRect:
           serializedVersion: 2
-          x: 10
-          y: 428
+          x: 13
+          y: 415
           width: 175
           height: 80
         activated: 1
       - idIndex: 11
         command:
-          inputType: 2
+          inputType: 0
           motionCommand: 0
           input: 3
-          framesRequired: 59
+          framesRequired: 0
           mashCount: 0
           state: 11
           inputs: 
