@@ -303,6 +303,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 ExitOverclocked();
             }
         }
+        if (noGrav > 0) { noGrav -= Time.deltaTime * 60 * localTimescale; }
     }
 
     void ExitOverclocked()
@@ -490,7 +491,122 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 FaceVelocity();
             }
         }
+
+        CheckForLedge();
     }
+
+
+    float ledgeGrabForwardCheck = 1.5f;
+    float ledgeGrabUpCheck = 1.2f;
+    float ledgeGrabDownCheck = 2.5f;
+    Vector3 ledgeGrabOffset;
+
+    bool isGrabbingLedge = false;
+    Vector3 ledgeGrabPoint;
+
+
+
+    void CheckForLedge()
+    {
+        if (!aerialFlag || velocity.y > 0 || isGrabbingLedge)
+            return;
+
+
+        RaycastHit downHit;
+        Vector3 lineDownStart = (transform.position + Vector3.up * 1.5f) + character.transform.forward;
+        Vector3 lineDownEnd = (transform.position + Vector3.up * 0.7f) + character.transform.forward;
+        Physics.Linecast(lineDownStart, lineDownEnd, out downHit, wallLayerMask);
+        Debug.DrawLine(lineDownStart, lineDownEnd);
+
+        if (downHit.collider != null)
+        {
+            RaycastHit fwdHit;
+            Vector3 lineFwdStart = new Vector3(transform.position.x, downHit.point.y - 0.1f, transform.position.z);
+            Vector3 LineFwdEnd = new Vector3(transform.position.x, downHit.point.y-0.1f, transform.position.z) + character.transform.forward;
+            Physics.Linecast(lineFwdStart, LineFwdEnd, out fwdHit, wallLayerMask);
+            Debug.DrawLine(lineFwdStart, LineFwdEnd);
+
+            if (fwdHit.collider != null)
+            {
+                noGrav = 10;
+                velocity = Vector3.zero;
+
+                isGrabbingLedge = true;
+
+                Vector3 hangPos = new Vector3(fwdHit.point.x, fwdHit.point.y, fwdHit.point.z);
+                Vector3 offset = character.transform.forward * -0.1f + transform.up * -1f;
+                hangPos += offset;
+                transform.position = hangPos;
+                character.transform.forward = -fwdHit.normal;
+
+                StartLedgeGrab();
+            }
+        }
+    }
+
+
+    // GO INTO SPECIFIC STATE
+    void StartLedgeGrab()
+    {
+        // RESET AERIAL STUFF
+        jumps = jumpMax;
+        isGrabbingLedge = true;
+        velocity = Vector3.zero;
+
+        // limit rotation to y axis only
+
+        // Position player at ledge
+       // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+
+
+        StartState(27); // ledge grab state
+        // play animation based on state
+    }
+
+
+    // Still needs to handle getting hit out of ledge grab
+    // Also maybe I should lock the player position in case anything nudges the player while hanging
+    void LedgeGrab()
+    {
+        // uneeded cause of state or needed for lockout timer?
+        if (!isGrabbingLedge) return;
+
+        // uneeded??? maybe???
+        // Disable horizontal movement and gravity
+        // velocity = Vector3.zero;
+        // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+
+        // Wait for player input
+        if (Input.GetButtonDown("Jump"))
+        {
+            ClimbUpLedge();
+        }
+        /*
+        else if (Input.GetButtonDown("Crouch"))
+        {
+            DropFromLedge();
+        }
+        */
+    }
+
+    void ClimbUpLedge()
+    {
+        isGrabbingLedge = false;
+        // transform.position = ledgeGrabPoint + ledgeGrabOffset;
+        StartState(0);// neutral
+        velocity.y = 0.45f;
+        // Jump(0.45f);
+    }
+
+    void DropFromLedge()
+    {
+        isGrabbingLedge = false;
+        noGrav = 0;
+    }
+
+
+
+
 
     void UpdateState()
     {
@@ -697,7 +813,21 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 14:
                 EnemyStep(_params[0].val);
                 break;
+            case 15:
+                LedgeGrab();
+                break;
+            case 16:
+                NoGrav(_params[0].val);
+                break;
+            case 17:
+                Jumping(_params[0].val, _params[1].val);
+                break;
         }
+    }
+
+    void NoGrav(float _timer)
+    {
+        noGrav = _timer;
     }
 
     void EnemyStep(float _pow)
@@ -749,6 +879,19 @@ public class CharacterObject : MonoBehaviour, IEffectable
     {
         velocity.y = _pow;
         jumps--;
+    }
+
+    void Jumping(float _pow, float _inputIndex)
+    {
+        if (controlType == ControlType.AI)
+        {
+            return;
+        }
+        int idx = Mathf.RoundToInt(_inputIndex);
+        if (inputBuffer.buffer[24].rawInputs[idx].hold > 1)
+        {
+            velocity.y += _pow * Time.deltaTime * 60 * localTimescale;
+        }
     }
 
     void CanCancel(float _val)
@@ -877,11 +1020,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (hitStun <= 0 && !targeting ) { FaceStick(1); faceStick = false; }
 
+        // BUGGY AF
+        // FIX THIS
+        /*
         if (softTarget)
         {
             FaceTarget(softTarget.gameObject.transform.position);
             faceStick = false;
         }
+        */
     }
 
     // externally called from enemy
@@ -1238,7 +1385,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public void GettingHit()
     {
         hitStun -= Time.deltaTime * 60 * localTimescale;
-        noGrav -= Time.deltaTime * 60 * localTimescale;
+
         if (hitStun <= 0) { EndState(); }
 
         // Wall Slump
