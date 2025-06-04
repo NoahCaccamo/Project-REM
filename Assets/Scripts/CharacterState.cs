@@ -60,6 +60,10 @@ public class CharacterState
         // else { chara.jumps--; } // move out later if we implement prio or use jump for something else
         return true;
     }
+    public CharacterState()
+    {
+        events = new List<StateEvent>();
+    }
 }
 
 [System.Serializable]
