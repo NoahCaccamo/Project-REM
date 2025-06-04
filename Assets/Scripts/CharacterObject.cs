@@ -822,6 +822,9 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 17:
                 Jumping(_params[0].val, _params[1].val);
                 break;
+            case 18:
+                Slam(_params[0].val);
+                break;
         }
     }
 
@@ -977,6 +980,15 @@ public class CharacterObject : MonoBehaviour, IEffectable
             newBullet.GetComponent<Bullet>().character = this;
 
             VelocityY(0.1f);
+        }
+    }
+
+    void Slam(float _nextState)
+    {
+        int stateIdx = Mathf.RoundToInt(_nextState);
+        if (!aerialFlag)
+        {
+            StartState(stateIdx);
         }
     }
 

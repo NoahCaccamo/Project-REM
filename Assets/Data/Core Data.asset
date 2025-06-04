@@ -179,28 +179,28 @@ MonoBehaviour:
     proximityReq: 0
   - stateName: Enemy/Punch
     index: 0
-    length: 32
+    length: 120
     loop: 0
     blendRate: 0.1
     events:
     - start: 0
       end: 0
-      active: 1
+      active: 0
       script: 0
-      hasExecuted: 1
+      hasExecuted: 0
       parameters:
       - name: 
         val: 0
     - start: 0
       end: 5
-      active: 1
+      active: 0
       script: 1
       hasExecuted: 0
       parameters:
       - name: 
         val: 0.05
     attacks:
-    - start: 25
+    - start: 47
       length: 7
       hitstun: 6
       hitStop: 6
@@ -472,7 +472,7 @@ MonoBehaviour:
       hitboxScale: {x: 2.32, y: 2.8770218, z: 3.3}
       cancelWindow: 8
       playerBoost: 0
-      hitActive: 7
+      hitActive: 0
       statusData: {fileID: 0}
     jumpReq: 0
     meterReq: 0
@@ -751,7 +751,7 @@ MonoBehaviour:
         val: 0
     - start: 2
       end: 6
-      active: 1
+      active: 0
       script: 1
       hasExecuted: 0
       parameters:
@@ -972,7 +972,7 @@ MonoBehaviour:
       hitboxScale: {x: 2.02, y: 1.4, z: 2.73}
       cancelWindow: 28
       playerBoost: 0
-      hitActive: 19
+      hitActive: 0
       statusData: {fileID: 0}
     jumpReq: 0
     meterReq: 0
@@ -1095,6 +1095,66 @@ MonoBehaviour:
     dashCooldownReq: 0
     groundedReq: 0
     proximityReq: 0
+  - stateName: Buttslam
+    index: 0
+    length: 60
+    loop: 1
+    blendRate: 0.1
+    events:
+    - start: 0
+      end: 60
+      active: 1
+      script: 0
+      hasExecuted: 0
+      parameters:
+      - name: 
+        val: -0.6
+    - start: 0
+      end: 60
+      active: 1
+      script: 18
+      hasExecuted: 0
+      parameters:
+      - name: 
+        val: 19
+    attacks:
+    - start: 0
+      length: 60
+      hitstun: 5
+      hitStop: 5
+      hitAni: {x: 0, y: 0}
+      knockback: {x: 0, y: -0.8, z: 0}
+      hitboxPos: {x: 0, y: -0.162, z: 0.731}
+      hitboxScale: {x: 2.02, y: 2.71, z: 2.73}
+      cancelWindow: 10
+      playerBoost: 0
+      hitActive: 60
+      statusData: {fileID: 0}
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
+    proximityReq: 0
+  - stateName: Enemy/Sweep
+    index: 0
+    length: 50
+    loop: 0
+    blendRate: 0.1
+    events:
+    - start: 18
+      end: 18
+      active: 1
+      script: 1
+      hasExecuted: 0
+      parameters:
+      - name: 
+        val: 0.3
+    attacks: []
+    jumpReq: 0
+    meterReq: 0
+    dashCooldownReq: 0
+    groundedReq: 0
+    proximityReq: 0
   characterScripts:
   - index: 0
     name: Velocity Y
@@ -1183,6 +1243,11 @@ MonoBehaviour:
     - name: Pow
       val: 0
     - name: InputIndex
+      val: 0
+  - index: 0
+    name: Slam
+    parameters:
+    - name: Next State Index
       val: 0
   moveLists:
   - name: Unarmed
@@ -1446,7 +1511,7 @@ MonoBehaviour:
           input: 2
           framesRequired: 0
           mashCount: 0
-          state: 8
+          state: 21
           inputs: 
         priority: 1
         followUps: 
