@@ -21,16 +21,16 @@ MonoBehaviour:
     minRange: 0
     maxRange: 2
     weight: 0
-    cooldown: 300
-    cooldownTimer: 0
+    cooldown: 60
+    cooldownTimer: -0.29504848
   - name: jawmp
-    stateIndex: 1
-    minRange: 8
-    maxRange: 10
+    stateIndex: 29
+    minRange: 0
+    maxRange: 2
     weight: 0
     cooldown: 60
-    cooldownTimer: 0
-  hp: 5
+    cooldownTimer: -0.92994237
+  hp: 30
   maxArmor: 0
   sightRange: 10
   attackRange: 2
