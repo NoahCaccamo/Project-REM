@@ -96,6 +96,11 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
             hp = enemyData.hp;
 
+            if (_playerTrans == null)
+            {
+                _playerTrans = GameEngine.gameEngine.mainCharacter.transform;
+            }
+
             if (enemyData.maxArmor > 0)
             {
                 hasArmor = true;
@@ -650,28 +655,34 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // DESTROY AFTER HITSTUN IS DONE HACKY
         if (hp <= 0)
         {
-            if (controlType == ControlType.AI)
+            OnDeath();
+        }
+    }
+
+    void OnDeath()
+    {
+        if (controlType == ControlType.AI)
+        {
+            roomManager.OnEnemyDeath(this.gameObject);
+            // Get a random position (box), then spawn the drop
+            int numDrops = Random.Range(3, 10);
+            for (int i = 0; i < numDrops; i++)
             {
-                // Get a random position (box), then spawn the drop
-                int numDrops = Random.Range(3, 10);
-                for (int i = 0; i < numDrops; i++)
-                {
-                    Vector3 minPos = new Vector3(-1, -1, -1);
-                    Vector3 maxPos = new Vector3(1, 1, 1);
-                    Vector3 randomPos = new Vector3(Random.Range(minPos.x, maxPos.x), Random.Range(minPos.y, maxPos.y), Random.Range(minPos.z, maxPos.z));
-                    Instantiate(enemyDrop, transform.position + randomPos, transform.rotation);
-                }
-                Destroy(this.gameObject);
+                Vector3 minPos = new Vector3(-1, -1, -1);
+                Vector3 maxPos = new Vector3(1, 1, 1);
+                Vector3 randomPos = new Vector3(Random.Range(minPos.x, maxPos.x), Random.Range(minPos.y, maxPos.y), Random.Range(minPos.z, maxPos.z));
+                Instantiate(enemyDrop, transform.position + randomPos, transform.rotation);
             }
-            
-            // GO TO WACKY GAME IF DEAD
-            if (controlType == ControlType.PLAYER)
-            {
-                //Camera.main.enabled = false;
-                minigameCam.gameObject.SetActive(true);
-                minigameCam.enabled = true;
-                Time.timeScale = 0;
-            }
+            Destroy(this.gameObject);
+        }
+
+        // GO TO WACKY GAME IF DEAD
+        if (controlType == ControlType.PLAYER)
+        {
+            //Camera.main.enabled = false;
+            minigameCam.gameObject.SetActive(true);
+            minigameCam.enabled = true;
+            Time.timeScale = 0;
         }
     }
 
@@ -1317,24 +1328,25 @@ public class CharacterObject : MonoBehaviour, IEffectable
             ApplyEffect(curAtk.statusData);
         }
 
+        CheckIfDead(nextKnockback);
 
-        // hacky death check in wrong place and should be its own state
+        // uneeded sets in startstate currentState = 3; 
+        StartState(3); // magic number  hitstun state in coredata
+        GlobalPrefab(0); // more magic number
+    }
+
+    private void CheckIfDead(Vector3 _knockback)
+    {
         if (hp <= 0)
         {
             if (controlType == ControlType.AI)
             {
                 hitStun = 60;
-                nextKnockback = Vector3.Scale(nextKnockback, new Vector3(2f, 3f, 2f));
-                nextKnockback.y = 1.5f;
-                SetVelocity(nextKnockback);
-
-                roomManager.KilledOponent(this.gameObject);
+                _knockback = Vector3.Scale(_knockback, new Vector3(2f, 3f, 2f));
+                _knockback.y = 1.5f;
+                SetVelocity(_knockback);
             }
         }
-
-        // uneeded sets in startstate currentState = 3; 
-        StartState(3); // magic number  hitstun state in coredata
-        GlobalPrefab(0); // more magic number
     }
 
     private bool HandleArmor(Attack curAtk, CharacterObject attacker)
@@ -1383,6 +1395,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         hitStun = 30;
         noGrav = 23;
+
+        CheckIfDead(new Vector3(0f, 0f, 0f));
 
         // uneeded sets in startstate currentState = 3; 
         StartState(3); // magic number  hitstun state in coredata

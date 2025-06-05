@@ -3,11 +3,18 @@ using UnityEngine;
 
 public class RoomManager : MonoBehaviour
 {
+    [SerializeField] private List<SpawnPoint> enemySpawns;
+
+    [Header("Characters")]
+    // [SerializeField] GameObject[] aiCharacters;
+    [SerializeField] List<GameObject> spawnedInCharacters;
+
+    [SerializeField] SpawnPoint reward;
 
     public GameObject doors;
-    List<GameObject> listOfOpponents = new List<GameObject>();
 
-    bool challengeIsActive = false;
+    bool roomCleared = false;
+    bool challengeActive = false;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -20,28 +27,34 @@ public class RoomManager : MonoBehaviour
         
     }
 
+    private void SpawnAllCharacters()
+    {
+        foreach (var spawn in enemySpawns)
+        {
+            GameObject instantiatedCharacter = Instantiate(spawn.prefab, spawn.localTransform.position, spawn.localTransform.rotation);
+            instantiatedCharacter.GetComponent<CharacterObject>().roomManager = this;
+            spawnedInCharacters.Add(instantiatedCharacter);
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.name == "Player")
         {
-            if (!challengeIsActive)
+            if (!roomCleared && !challengeActive)
             {
-                if (GameObject.FindGameObjectsWithTag("Enemy").Length > 0)
-                {
-                    doors.SetActive(true);
-                    listOfOpponents.AddRange(GameObject.FindGameObjectsWithTag("Enemy"));
-
-                    challengeIsActive = true;
-                }
+                doors.SetActive(true);
+                SpawnAllCharacters();
+                challengeActive = true;
             }
         }
     }
 
-    public void KilledOponent(GameObject opponent)
+    public void OnEnemyDeath(GameObject opponent)
     {
-        if (listOfOpponents.Contains(opponent))
+        if (spawnedInCharacters.Contains(opponent))
         {
-            listOfOpponents.Remove(opponent);
+            spawnedInCharacters.Remove(opponent);
         }
 
         if (AreOpponentsDead())
@@ -49,15 +62,20 @@ public class RoomManager : MonoBehaviour
             Time.timeScale = 0.10f;
             doors.SetActive(false);
 
-            challengeIsActive = false;
+            roomCleared = true;
+            challengeActive = false;
             // GIVE REWARD HERE
+
+            if (reward.prefab && reward.localTransform)
+            {
+                GameObject _reward = Instantiate(reward.prefab, reward.localTransform.position, reward.localTransform.rotation);
+            }
         }
-        print(listOfOpponents.Count);
     }
 
     public bool AreOpponentsDead()
     {
-        if (listOfOpponents.Count <= 0)
+        if (spawnedInCharacters.Count <= 0)
         {
             return true;
         }
@@ -66,4 +84,11 @@ public class RoomManager : MonoBehaviour
             return false;
         }
     }
+}
+
+[System.Serializable]
+public class SpawnPoint
+{
+    public GameObject prefab;
+    public Transform localTransform;
 }

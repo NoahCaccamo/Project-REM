@@ -972,7 +972,7 @@ MonoBehaviour:
       hitboxScale: {x: 2.02, y: 1.4, z: 2.73}
       cancelWindow: 28
       playerBoost: 0
-      hitActive: 0
+      hitActive: 19
       statusData: {fileID: 0}
     jumpReq: 0
     meterReq: 0
@@ -1145,7 +1145,7 @@ MonoBehaviour:
       end: 18
       active: 1
       script: 1
-      hasExecuted: 0
+      hasExecuted: 1
       parameters:
       - name: 
         val: 0.3
@@ -1511,7 +1511,7 @@ MonoBehaviour:
           input: 2
           framesRequired: 0
           mashCount: 0
-          state: 21
+          state: 28
           inputs: 
         priority: 1
         followUps: 
