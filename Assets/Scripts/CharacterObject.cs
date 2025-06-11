@@ -77,6 +77,8 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public float armorHealth = 100f;
     public bool isArmorBroken = false;
 
+    public BreakerInventoryObject breakerInventory;
+
 
     void Start()
     {
@@ -122,6 +124,12 @@ public class CharacterObject : MonoBehaviour, IEffectable
         {
             inventory.AddItem(item.item, 1);
             Destroy(other.gameObject);
+        }
+
+        var _roomManager = other.GetComponent<RoomManager>();
+        if (_roomManager)
+        {
+            roomManager = _roomManager;
         }
     }
     private void OnApplicationQuit()
@@ -819,7 +827,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 HoldVelocity(_params[0].val);
                 break;
             case 13:
-                Shoot(_params[0].val);
+                Shoot(_params[0].val, _params[1].val);
                 break;
             case 14:
                 EnemyStep(_params[0].val);
@@ -836,7 +844,48 @@ public class CharacterObject : MonoBehaviour, IEffectable
             case 18:
                 Slam(_params[0].val);
                 break;
+            case 19:
+                BreakerTransition(_params[0].val);
+                break;
+            case 20:
+                GlobalTimescale(_params[0].val, _params[1].val);
+                break;
+            case 21:
+                TempInstantiateGlobalPrefabInFront(_params[0].val);
+                break;
         }
+    }
+
+    void TempInstantiateGlobalPrefabInFront(float _index)
+    {
+        int idx = Mathf.RoundToInt(_index);
+        Instantiate(GameEngine.coreData.globalPrefabs[idx], transform.position + character.transform.forward * 4, character.transform.rotation);
+    }
+
+    void GlobalTimescale(float _pow, float _duration)
+    {
+        roomManager.SlowAllEnemies(_pow);
+    }
+
+    void BreakerTransition(float _held)
+    {
+        if (breakerInventory && breakerInventory.breakerSlots.Count > 0)
+        {
+            if (_held == 0)
+            {
+                BreakerObject currBreaker = breakerInventory.GetActiveBreaker();
+                StartState(currBreaker.tapState);
+            } else
+            {
+                BreakerObject currBreaker = breakerInventory.GetActiveBreaker();
+                StartState(currBreaker.holdState);
+                breakerInventory.RemoveActiveBreaker();
+            }
+            return;
+        }
+
+        // if we dont have a breaker just go to neutral
+        StartState(0);
     }
 
     void NoGrav(float _timer)
@@ -967,7 +1016,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         prevHold = inputBuffer.buffer[24].rawInputs[3].hold;
     }
 
-    void Shoot(float _pow)
+    void Shoot(float _pow, float _inputIndex)
     {
         Vector3 direction;
         Quaternion lookRotation = transform.rotation;
@@ -982,8 +1031,9 @@ public class CharacterObject : MonoBehaviour, IEffectable
             lookRotation = Quaternion.LookRotation(direction);
         }
 
-        // HORRID HARDCODE AA
-        if (Input.GetButtonDown("Slash"))
+        string[] inputNames = GameEngine.coreData.GetRawInputNames();
+
+        if (Input.GetButtonDown(inputNames[Mathf.RoundToInt(_inputIndex)]))
         {
             Debug.Log("PEW");
             GameObject newBullet = Instantiate(bullet, transform.position, lookRotation);
@@ -1093,12 +1143,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public int currentCommandState;
     public int currentCommandStep;
 
-    public void GetCommandState()
+    public void GetCommandState(bool isStyle)
     {
+        MoveList list = isStyle ? GameEngine.gameEngine.CurrentStyleList() : GameEngine.gameEngine.CurrentMoveList();
+
         currentCommandState = 0;
-        for (int c = 0; c < GameEngine.gameEngine.CurrentMoveList().commandStates.Count; c++)
+        for (int c = 0; c < list.commandStates.Count; c++)
         {
-            CommandState s = GameEngine.gameEngine.CurrentMoveList().commandStates[c];
+            CommandState s = list.commandStates[c];
             if (s.aerial == aerialFlag)
             {
                 currentCommandState = c;
@@ -1117,7 +1169,7 @@ public class CharacterObject : MonoBehaviour, IEffectable
         if (Input.GetButton("RB")) { targeting = true; }
         else { targeting = false; }
 
-        if (Input.GetButtonDown("RB")) 
+        if (Input.GetButtonDown("RB"))
         {
             target = TargetClosestEnemy();
         }
@@ -1140,12 +1192,52 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
         if (Input.GetButtonDown("LT")) { GameEngine.gameEngine.ToggleMoveList(); }
 
+        Vector2 Dpad = new Vector2(Input.GetAxisRaw("DPadX"), Input.GetAxisRaw("DPadY"));
+
+        if (Dpad.y != 0)
+        {
+            if (Dpad.y == 1)
+            {
+                GameEngine.gameEngine.globalStylelistIndex = 0;
+            }
+            if (Dpad.y == -1)
+            {
+                GameEngine.gameEngine.globalStylelistIndex = 2;
+            }
+        }
+
+        if (Dpad.x != 0)
+        {
+            if (Dpad.x == 1)
+            {
+                GameEngine.gameEngine.globalStylelistIndex = 1;
+            }
+            if (Dpad.x == -1)
+            {
+                GameEngine.gameEngine.globalStylelistIndex = 3;
+            }
+        }
+
+
         inputBuffer.Update();
 
         bool startState = false;
 
-        GetCommandState();
-        CommandState comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
+        bool isStyle = Input.GetButtonDown("Utility") || Input.GetButtonUp("Utility") || Input.GetButton("Utility");
+
+        GetCommandState(isStyle);
+        CommandState comState;
+
+        if (isStyle)
+        {
+            comState = GameEngine.gameEngine.CurrentStyleList().commandStates[currentCommandState];
+        }
+        else
+        {
+            comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
+        }
+
+        // CommandState comState = GameEngine.gameEngine.CurrentMoveList().commandStates[currentCommandState];
 
         commandTimeoutTimer += Time.deltaTime * 60;
 

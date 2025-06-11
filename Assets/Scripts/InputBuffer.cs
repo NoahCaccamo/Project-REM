@@ -110,7 +110,7 @@ public class InputBuffer
         {
             // this happens on hold input since its already used
             // figure out a better thing to do here maybe? or other way to handle it.
-            Debug.Log("NO BUTTON COMMAND");
+            Debug.LogError("NO BUTTON COMMAND");
             return;
         }
         buffer[buttonCommandCheck[_i]].rawInputs[_i].used = true;
@@ -246,8 +246,11 @@ public class InputBuffer
                 return buttonCommandCheck[command.input] >= 0 &&
                        buffer[buttonCommandCheck[command.input]].rawInputs[command.input].CanExecute();
 
+            case InputCommand.InputCommandType.Release:
+                return buffer[buffer.Count - 1].rawInputs[command.input].hold == -1 && buttonCommandCheck[command.input] >= 0;
+
             case InputCommand.InputCommandType.Hold:
-                return buffer[buffer.Count - 1].rawInputs[command.input].hold >= command.framesRequired;
+                return buffer[buffer.Count - 1].rawInputs[command.input].hold >= command.framesRequired && buttonCommandCheck[command.input] >= 0;
 
 
             case InputCommand.InputCommandType.Delay:

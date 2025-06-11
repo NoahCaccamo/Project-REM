@@ -84,6 +84,13 @@ public class RoomManager : MonoBehaviour
             return false;
         }
     }
+
+    public void SlowAllEnemies(float _pow)
+    {
+        foreach(GameObject character in spawnedInCharacters) {
+            character.GetComponent<CharacterObject>().localTimescale = _pow;
+        }
+    }
 }
 
 [System.Serializable]

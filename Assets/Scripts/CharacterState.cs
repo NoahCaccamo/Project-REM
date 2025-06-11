@@ -121,7 +121,8 @@ public class InputCommand
         Hold,
         Delay,
         Mash,
-        TargetingDirectional
+        TargetingDirectional,
+        Release
     }
 
     public InputCommandType inputType;

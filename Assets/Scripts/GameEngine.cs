@@ -18,10 +18,16 @@ public class GameEngine : MonoBehaviour
     public CharacterObject mainCharacter;
 
     public int globalMovelistIndex;
+    public int globalStylelistIndex;
 
     public MoveList CurrentMoveList()
     {
         return coreData.moveLists[globalMovelistIndex];
+    }
+
+    public MoveList CurrentStyleList()
+    {
+        return coreData.styleLists[globalStylelistIndex];
     }
 
     public void ToggleMoveList()
@@ -44,11 +50,26 @@ public class GameEngine : MonoBehaviour
         if (_pow > hitStop) {  hitStop = _pow; }
     }
 
+    static float timescaleTimer = 0;
+    public void SlowGlobalTimescale(float _pow, float _time)
+    {
+        // Time.timeScale = _pow;
+        mainCharacter.roomManager.SlowAllEnemies(_pow);
+        timescaleTimer = _time;
+    }
+
     // Update is called once per frame
     void Update()
     {
         if (hitStop > 0) { hitStop -= 60 * Time.deltaTime; }
         if (Time.timeScale < 1f) { Time.timeScale += 0.01f; }
+
+
+
+        if (timescaleTimer > 0) { timescaleTimer -= 60 * Time.unscaledDeltaTime; }
+        if (timescaleTimer < 0)
+        {
+        }
     }
 
     public static void GlobalPrefab(int _index, GameObject _parentObj)
@@ -109,6 +130,7 @@ public class GameEngine : MonoBehaviour
             GUI.Label(new Rect(500f, m * ySpace, 100, 20), coreData.motionCommands[m].name);
         }
         GUI.Label(new Rect(600f, 10f, 100, 20), CurrentMoveList().name.ToString());
+        GUI.Label(new Rect(600f, 30f, 100, 20), CurrentStyleList().name.ToString());
 
         // HP AND OVERCLOCK
         GUI.Label(new Rect(200f, 15f, 90, 20), "HP: " + mainCharacter.hp.ToString());

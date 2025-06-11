@@ -20,6 +20,7 @@ public class CoreData : ScriptableObject
     // public List<CommandState> commandStates;
 
     public List<MoveList> moveLists;
+    public List<MoveList> styleLists;
 
     public List<GameObject> globalPrefabs;
 
