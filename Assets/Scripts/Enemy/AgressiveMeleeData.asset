@@ -22,7 +22,7 @@ MonoBehaviour:
     maxRange: 2
     weight: 0
     cooldown: 60
-    cooldownTimer: -0.29504848
+    cooldownTimer: -0.5664315
   - name: jawmp
     stateIndex: 29
     minRange: 0
@@ -30,7 +30,7 @@ MonoBehaviour:
     weight: 0
     cooldown: 60
     cooldownTimer: -0.92994237
-  hp: 1
+  hp: 8
   maxArmor: 0
   sightRange: 10
   attackRange: 2

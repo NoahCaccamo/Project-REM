@@ -37,12 +37,33 @@ public class GameEngine : MonoBehaviour
         if (globalMovelistIndex < 0) { globalMovelistIndex = coreData.moveLists.Count - 1; }
     }
 
+    public void SetMoveList(string  moveList)
+    {
+        switch (moveList)
+        {
+            case "Unarmed":
+                globalMovelistIndex = 0;
+                break;
+            case "Spear":
+                globalMovelistIndex = 1;
+                break;
+            default:
+                break;
+        }
+    }
+    public void SetMoveList(int moveList)
+    {
+        globalMovelistIndex = moveList;
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         Application.targetFrameRate = 60;
         coreData = coreDataObject;
         gameEngine = this;
+
+        SetMoveList(0);
     }
 
     public static void SetHitStop(float _pow)
