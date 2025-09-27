@@ -1,29 +1,39 @@
 using System.Linq;
 using UnityEngine;
 
-public enum SubState
+public enum PetSubState
 {
     Idle,
     Chase,
-    Attacking
+    Wander,
+    Eat,
+    Interact
 }
 
-public abstract class EnemyAIBehaviour : MonoBehaviour
+public enum PetHungerState
 {
-    public SubState currentSubState = SubState.Idle;
-    protected EnemyData enemyData;
-    public virtual void Initialize(CharacterObject enemy)
+    Starving,
+    Hungry,
+    Neutral,
+    Satiated
+}
+
+public abstract class PetAIBehaviour : MonoBehaviour
+{
+    public PetSubState currentSubState = PetSubState.Idle;
+    protected PetData petData;
+    public virtual void Initialize(CharacterObject pet)
     {
-      //  enemyData = enemy.enemyData;
+        petData = pet.petData;
     }
-    public abstract void UpdateAI(CharacterObject enemy);
+    public abstract void UpdateAI(CharacterObject pet);
 
     public virtual void TickCooldowns()
     {
-        if (enemyData == null || enemyData.attackOptions == null)
+        if (petData == null || petData.actionOptions == null)
             return;
 
-        foreach (var option in enemyData.attackOptions)
+        foreach (var option in petData.actionOptions)
         {
             if (option.cooldownTimer > 0)
                 option.cooldownTimer -= Time.deltaTime * 60;
@@ -43,6 +53,8 @@ public abstract class EnemyAIBehaviour : MonoBehaviour
         dir.Normalize();
         return dir;
     }
+
+    /*
     protected EnemyAttackOption ChooseAttack(Vector3 enemyPos, Vector3 playerPos)
     {
         float dist = Vector3.Distance(enemyPos, playerPos);
@@ -70,5 +82,5 @@ public abstract class EnemyAIBehaviour : MonoBehaviour
 
         return attacks.FirstOrDefault();
     }
-
+    */
 }

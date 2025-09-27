@@ -60,7 +60,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public float localTimescale = 1f;
 
     public GameObject bullet;
-    public GameObject spear;
     public GameObject enemyDrop;
     public bool overclocked = false;
     public float overclockDrainRate = 0.1f;
@@ -70,16 +69,19 @@ public class CharacterObject : MonoBehaviour, IEffectable
     public Camera minigameCam;
 
     public IControlStrategy controlStrategy;
-    public EnemyAIBehaviour aiBehaviour;
-    public EnemyData enemyData;
+    // public EnemyAIBehaviour aiBehaviour;
+    // public EnemyData enemyData;
+
+    public PetAIBehaviour petBehaviour;
+    public PetData petData;
 
     public bool hasArmor = false;
     public float armorHealth = 100f;
     public bool isArmorBroken = false;
-    public bool isSpeared = false;
 
     public BreakerInventoryObject breakerInventory;
 
+    public bool canWallBounce = false;
 
     void Start()
     {
@@ -90,24 +92,18 @@ public class CharacterObject : MonoBehaviour, IEffectable
         // Set up our enemy AI's data
         if (controlType == ControlType.AI)
         {
-            controlStrategy = new EnemyAIControl(aiBehaviour);
-
-            if (aiBehaviour != null)
+            controlStrategy = new PetAIControl(petBehaviour);
+            
+            if (petBehaviour != null)
             {
-                aiBehaviour.Initialize(this);
+                petBehaviour.Initialize(this);
             }
 
-            hp = enemyData.hp;
+            // hp = enemyData.hp;
 
             if (_playerTrans == null)
             {
                 _playerTrans = GameEngine.gameEngine.mainCharacter.transform;
-            }
-
-            if (enemyData.maxArmor > 0)
-            {
-                hasArmor = true;
-                armorHealth = enemyData.maxArmor;
             }
 
             enemyLayerMask = LayerMask.GetMask("Player");
@@ -858,34 +854,27 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 ThrowSpear();
                 break;
             case 23:
-                ThrowSpear();
+                ActivateWallbounce();
                 break;
+        }
+    }
+    void ActivateWallbounce()
+    {
+        RaycastHit fwdHit;
+        Vector3 lineFwdStart = new Vector3(transform.position.x, transform.position.y - 0.1f, transform.position.z);
+        Vector3 LineFwdEnd = new Vector3(transform.position.x, transform.position.y - 0.1f, transform.position.z) + character.transform.forward;
+        Physics.Linecast(lineFwdStart, LineFwdEnd, out fwdHit, wallLayerMask);
+        Debug.DrawLine(lineFwdStart, LineFwdEnd);
+
+        if (fwdHit.collider != null)
+        {
+            WallBounce(fwdHit.point);
         }
     }
 
     void ThrowSpear()
     {
-        Debug.Log("THROWIN SPEAR");
-        GameEngine.gameEngine.SetMoveList(0);
-        Vector3 direction;
-        Quaternion lookRotation = transform.rotation;
-        if (target)
-        {
-            direction = (target.transform.position - transform.position).normalized;
-            lookRotation = Quaternion.LookRotation(direction);
-        }
-        else if (softTarget)
-        {
-            direction = (softTarget.transform.position - transform.position).normalized;
-            lookRotation = Quaternion.LookRotation(direction);
-        }
 
-        Debug.Log("SPEW");
-        GameObject newSpear = Instantiate(spear, transform.position, lookRotation);
-        newSpear.GetComponent<Spear>().lookDirection = lookRotation;
-        newSpear.GetComponent<Spear>().character = this;
-
-        VelocityY(0.1f);
     }
 
     void TempInstantiateGlobalPrefabInFront(float _index)
@@ -1230,10 +1219,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
                 // set to whatever spear throw attack is
                 StartState(34);
             }
-            else
-            {
-            RecallSpear();
-            }
         }
 
         Vector2 Dpad = new Vector2(Input.GetAxisRaw("DPadX"), Input.GetAxisRaw("DPadY"));
@@ -1391,28 +1376,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
         return _target;
     }
 
-    void RecallSpear()
-    {
-        Debug.Log("recalling spear");
-        Collider[] hitEnemies = Physics.OverlapSphere(character.transform.position, 30f, enemyLayerMask);
-
-        foreach (Collider maybeSpearedEnemy in hitEnemies)
-        {
-            if (maybeSpearedEnemy.TryGetComponent<CharacterObject>(out var enemy))
-            {
-                if (enemy.isSpeared)
-                {
-                    if (enemy.controlType == ControlType.PLAYER)
-                    {
-                        return;
-                    }
-                    enemy.GetSpeared(GameEngine.gameEngine.mainCharacter, true);
-                }
-            }
-        }
-
-    }
-
 
     public Vector2 currHitAni;
     public Vector2 targetHitAni;
@@ -1561,47 +1524,6 @@ public class CharacterObject : MonoBehaviour, IEffectable
         GlobalPrefab(0); // more magic number
     }
 
-    public void GetSpeared(CharacterObject attacker, bool isRecalling)
-    {
-
-        hp--;
-        if (isRecalling)
-        {
-            isSpeared = false;
-            GameEngine.gameEngine.globalMovelistIndex = 1;
-
-        } else
-        {
-            isSpeared = true;
-
-        }
-        Debug.Log(hp);
-        VelocityY(0f);
-
-        // can += for little variants
-        // put variance on the one that is lower as an idea (e.g. if attack is primarily up and down keep it the same so main motion isnt lost, so lr variant)
-        targetHitAni.x += Random.Range(-0.1f, 0.1f);
-        targetHitAni.y += Random.Range(-0.1f, 0.1f);
-
-        currHitAni = targetHitAni * 0.7f; // multipy by target start position for hurt animation blending
-
-        FaceTarget(attacker.transform.position);
-
-        Vector3 knockOrientation2 = isRecalling ? -attacker.character.transform.forward : attacker.character.transform.forward;
-        SetVelocity(Quaternion.LookRotation(knockOrientation2) * new Vector3(0f, 0.3f, 2f));
-
-        GameEngine.SetHitStop(10);
-
-        hitStun = 30;
-        noGrav = 23;
-
-        CheckIfDead(new Vector3(0f, 0f, 0f));
-
-        // uneeded sets in startstate currentState = 3; 
-        StartState(3); // magic number  hitstun state in coredata
-        GlobalPrefab(0); // more magic number for fx
-    }
-
     public float hitStun;
     public float noGrav;
 
@@ -1717,5 +1639,13 @@ public class CharacterObject : MonoBehaviour, IEffectable
         Time.timeScale = 1;
 
         // get off me attack
+    }
+    public void WallBounce(Vector3 hitPosition)
+    {
+        Vector3 direction = character.transform.position - hitPosition;
+        direction.y = 0;
+        direction = direction.normalized;
+
+        SetVelocity(new Vector3(direction.x * 0.6f, 0.6f, direction.z * 0.6f));
     }
 }

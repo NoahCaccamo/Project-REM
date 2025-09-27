@@ -27,7 +27,6 @@ public class Spear : MonoBehaviour
         {
             // slowwww
             CharacterObject victim = other.transform.root.GetComponent<CharacterObject>();
-            victim.GetSpeared(character, false);
             Debug.Log("sHIT!");
             Destroy(this.gameObject);
         }
