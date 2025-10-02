@@ -10,8 +10,8 @@ public class MyCameraControl : MonoBehaviour
 
     // implement collision with terrain (pull cam in when too far down, push out when up?)
 
-    public string horizontalAxis = "RightStickX"; // As defined in your Unity Editor: Edit > Project Settings > Input
-    public string verticalAxis = "RightStickY";
+    public string horizontalAxis = "MouseX"; // As defined in your Unity Editor: Edit > Project Settings > Input
+    public string verticalAxis = "MouseY";
     public GameObject rig;
     public GameObject transformTarget;
     public GameObject lookTarget;
@@ -59,9 +59,9 @@ public class MyCameraControl : MonoBehaviour
     {
         //transformTarget = getmaincharobject
 
-        rig.transform.localPosition = new Vector3(0, 0, -camDistance);
+       // rig.transform.localPosition = new Vector3(0, 0, -camDistance);
         OrbitView();
-        Translate();
+        //Translate();
         SettleCameras();
     }
 

@@ -1186,7 +1186,14 @@ public class CharacterObject : MonoBehaviour, IEffectable
 
     void UpdateInput()
     {
+        // controller
         leftStick = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+
+        // keyboard
+
+        float horizontal = (Input.GetKey(KeyCode.A) ? -1 : 0) + (Input.GetKey(KeyCode.D) ? 1 : 0);
+        float vertical = (Input.GetKey(KeyCode.W) ? 1 : 0) + (Input.GetKey(KeyCode.S) ? -1 : 0);
+        leftStick = new Vector2(horizontal, vertical);
         if (Input.GetButton("RB")) { targeting = true; }
         else { targeting = false; }
 
