@@ -27,6 +27,10 @@ namespace KinematicCharacterController.Examples
             // Ignore the character's collider(s) for camera obstruction checks
             CharacterCamera.IgnoredColliders.Clear();
             CharacterCamera.IgnoredColliders.AddRange(Character.GetComponentsInChildren<Collider>());
+
+
+            // force First person
+            CharacterCamera.TargetDistance = 0;
         }
 
         private void Update()
@@ -76,7 +80,7 @@ namespace KinematicCharacterController.Examples
             // Handle toggling zoom level
             if (Input.GetMouseButtonDown(1))
             {
-                CharacterCamera.TargetDistance = (CharacterCamera.TargetDistance == 0f) ? CharacterCamera.DefaultDistance : 0f;
+                // CharacterCamera.TargetDistance = (CharacterCamera.TargetDistance == 0f) ? CharacterCamera.DefaultDistance : 0f;
             }
         }
 
@@ -91,6 +95,8 @@ namespace KinematicCharacterController.Examples
             characterInputs.JumpDown = Input.GetKeyDown(KeyCode.Space);
             characterInputs.CrouchDown = Input.GetKeyDown(KeyCode.C);
             characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C);
+            characterInputs.LeftHand = Input.GetMouseButton(0);
+            characterInputs.RightHand = Input.GetMouseButton(1);
 
             // Apply inputs to character
             Character.SetInputs(ref characterInputs);
