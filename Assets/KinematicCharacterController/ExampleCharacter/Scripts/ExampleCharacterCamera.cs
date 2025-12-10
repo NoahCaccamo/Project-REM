@@ -71,6 +71,9 @@ namespace KinematicCharacterController.Examples
             _targetVerticalAngle = 0f;
 
             PlanarDirection = Vector3.forward;
+
+            Camera.main.depthTextureMode = DepthTextureMode.Depth;
+
         }
 
         // Set the transform that the camera will orbit around

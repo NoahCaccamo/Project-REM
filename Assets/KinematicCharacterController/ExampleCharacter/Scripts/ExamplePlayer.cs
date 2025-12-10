@@ -1,8 +1,9 @@
-﻿using System.Collections;
+﻿using KinematicCharacterController;
+using KinematicCharacterController.Examples;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using KinematicCharacterController;
-using KinematicCharacterController.Examples;
+using UnityEngine.EventSystems;
 
 namespace KinematicCharacterController.Examples
 {
@@ -10,6 +11,8 @@ namespace KinematicCharacterController.Examples
     {
         public ExampleCharacterController Character;
         public ExampleCharacterCamera CharacterCamera;
+
+        public BackpackSurface BackpackSurface;
 
         private const string MouseXInput = "Mouse X";
         private const string MouseYInput = "Mouse Y";
@@ -19,6 +22,7 @@ namespace KinematicCharacterController.Examples
 
         private void Start()
         {
+            Object.DontDestroyOnLoad(this.gameObject);
             Cursor.lockState = CursorLockMode.Locked;
 
             // Tell camera to follow transform
@@ -35,9 +39,15 @@ namespace KinematicCharacterController.Examples
 
         private void Update()
         {
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
             {
                 Cursor.lockState = CursorLockMode.Locked;
+            }
+
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                Character.Motor.SetPosition(new Vector3(26.4899998f, 430.589996f, 202.509995f));
+                Character.DropPackage();
             }
 
             HandleCharacterInput();
@@ -82,6 +92,16 @@ namespace KinematicCharacterController.Examples
             {
                 // CharacterCamera.TargetDistance = (CharacterCamera.TargetDistance == 0f) ? CharacterCamera.DefaultDistance : 0f;
             }
+
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                BackpackSurface.OpenBackpack();
+            }
+
+            if (Input.GetKeyUp(KeyCode.Tab))
+            {
+                BackpackSurface.CloseBackpack();
+            }
         }
 
         private void HandleCharacterInput()
@@ -97,9 +117,19 @@ namespace KinematicCharacterController.Examples
             characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C);
             characterInputs.LeftHand = Input.GetMouseButton(0);
             characterInputs.RightHand = Input.GetMouseButton(1);
+            characterInputs.LeftHandDown = Input.GetMouseButtonDown(0);
+            characterInputs.RightHandDown = Input.GetMouseButtonDown(1);
+
+            characterInputs.SprintDown = Input.GetKey(KeyCode.LeftShift);
 
             // Apply inputs to character
             Character.SetInputs(ref characterInputs);
+        }
+
+        // Helper method to check if pointer is over UI
+        private bool IsPointerOverUI()
+        {
+            return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         }
     }
 }

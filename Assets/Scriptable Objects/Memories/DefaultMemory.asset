@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a61580510375bf24d8ddd6932ef13c0c, type: 3}
+  m_Name: DefaultMemory
+  m_EditorClassIdentifier: 
+  themeName: Default
+  accentColor: {r: 0.5372549, g: 0.8392157, b: 0.8980392, a: 1}
+  environmentMaterial: {fileID: 0}
+  ambientMusic: {fileID: 0}
+  roomPrefabs:
+  - {fileID: 9000728065981640243, guid: 4f459512e1e70c441bf3209a9a0d465e, type: 3}
+  crumbPrefabs:
+  - {fileID: 9000728065981640243, guid: 4f459512e1e70c441bf3209a9a0d465e, type: 3}
+  modifiers: []

@@ -12,8 +12,9 @@ GameObject:
   - component: {fileID: 1403833356568064016}
   - component: {fileID: 6120389345897134355}
   - component: {fileID: 1813857012860873618}
-  - component: {fileID: 8913768274402334381}
-  m_Layer: 0
+  - component: {fileID: 4190998696525484774}
+  - component: {fileID: -2222744062463244698}
+  m_Layer: 12
   m_Name: Spear
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -30,7 +31,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 4.84}
+  m_LocalScale: {x: 0.1, y: 0.1, z: 3.17}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -103,13 +104,40 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8913768274402334381
+--- !u!54 &4190998696525484774
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2689347651003962251}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 1024
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &-2222744062463244698
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -118,10 +146,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2689347651003962251}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 72476bb6ac853644791bd5c2c430386c, type: 3}
+  m_Script: {fileID: 11500000, guid: 6ad97c395e5ad8842b8ed7b2d7705541, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lookDirection: {x: 0, y: 0, z: 0, w: 0}
-  direction: {x: 0, y: 0, z: 0}
-  speed: 20
-  character: {fileID: 0}
+  itemData: {fileID: 11400000, guid: 342a58dad42fdac4094cd61b01a0c446, type: 2}

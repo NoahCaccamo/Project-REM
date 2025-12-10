@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3402407477582506252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c68c9921ba684cd48a44b04a64b71b11, type: 3}
+  m_Name: BlitToRTHandleRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  blitMaterial: {fileID: 2100000, guid: 4a5832e1b9e521e4b9aa0d33324bb745, type: 2}
+--- !u!114 &-245245401787656945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: Ompucopass
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  injectionPoint: 450
+  fetchColorBuffer: 1
+  requirements: 4
+  passMaterial: {fileID: 2100000, guid: 2f95f49b8ca93484db06f665fb53d8ea, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de640fe3d0db1804a85f9fc8f5cadab6, type: 3}
+  m_Name: BlitToRTHandleRenderer
+  m_EditorClassIdentifier: 
+  debugShaders:
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7,
+      type: 3}
+    hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
+    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959,
+      type: 3}
+  probeVolumeResources:
+    probeVolumeDebugShader: {fileID: 0}
+    probeVolumeFragmentationDebugShader: {fileID: 0}
+    probeVolumeOffsetDebugShader: {fileID: 0}
+    probeVolumeSamplingDebugShader: {fileID: 0}
+    probeSamplingDebugMesh: {fileID: 0}
+    probeSamplingDebugTexture: {fileID: 0}
+    probeVolumeBlendStatesCS: {fileID: 0}
+  m_RendererFeatures:
+  - {fileID: -245245401787656945}
+  - {fileID: -3402407477582506252}
+  - {fileID: 8301537258395872097}
+  m_RendererFeatureMap: 0f15a63f9bb698fcf4d68f056d38c8d0612b5b3027fc3473
+  m_UseNativeRenderPass: 0
+  xrSystemData: {fileID: 0}
+  postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
+  m_AssetVersion: 2
+  m_OpaqueLayerMask:
+    serializedVersion: 2
+    m_Bits: 125
+  m_TransparentLayerMask:
+    serializedVersion: 2
+    m_Bits: 125
+  m_DefaultStencilState:
+    overrideStencilState: 0
+    stencilReference: 0
+    stencilCompareFunction: 8
+    passOperation: 2
+    failOperation: 0
+    zFailOperation: 0
+  m_ShadowTransparentReceive: 1
+  m_RenderingMode: 0
+  m_DepthPrimingMode: 0
+  m_CopyDepthMode: 0
+  m_DepthAttachmentFormat: 0
+  m_DepthTextureFormat: 0
+  m_AccurateGbufferNormals: 0
+  m_IntermediateTextureMode: 1
+--- !u!114 &725634443285385940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb63de672d6e5bd4fa290498ba0471f4, type: 3}
+  m_Name: MotionVectorDebugFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  debugMaterial: {fileID: 2100000, guid: dada0a7cdcbf85f4eac732ca5f89db41, type: 2}
+  motionFeature: {fileID: 779205553505530555}
+--- !u!114 &779205553505530555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83985788e59669144b0d1282d64bef8c, type: 3}
+  m_Name: MotionVectorFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  motionMaterial: {fileID: 2100000, guid: b5545219ba61af249b8dcfc97eb028cb, type: 2}
+--- !u!114 &7227916146802232454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46824562ce563744988c2c558478d92b, type: 3}
+  m_Name: BlitToRTHandleRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  m_CopyColorEvent: 500
+  blitMaterial: {fileID: 2100000, guid: 4a5832e1b9e521e4b9aa0d33324bb745, type: 2}
+--- !u!114 &8301537258395872097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: FullScreenPassRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  fetchColorBuffer: 1
+  requirements: 13
+  passMaterial: {fileID: 2100000, guid: 4b85b2954c6c9b74483136beea471e9f, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
