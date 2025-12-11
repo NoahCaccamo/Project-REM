@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,6 +20,8 @@ public class SceneTransitionManager : MonoBehaviour
     // Store the scene and spawn point identifier
     private string _previousScene;
     private string _returnEntryPointId;  // Which entry point to spawn at when returning
+
+    private DatamoshController _datamoshController;
 
     private void Awake()
     {
@@ -52,5 +55,41 @@ public class SceneTransitionManager : MonoBehaviour
     {
         _returnEntryPointId = null;
         _previousScene = null;
+    }
+
+    public void LoadSceneWithSequence(string targetScene)
+    {
+        StartCoroutine(LoadSceneSequence(targetScene));
+    }
+
+    private IEnumerator LoadSceneSequence(string targetScene)
+    {
+        if (_datamoshController == null)
+        {
+            _datamoshController = FindObjectOfType<DatamoshController>();
+        }
+
+        if (_datamoshController != null)
+        {
+            _datamoshController.SetMotionStrength(0f);
+        }
+
+        yield return null; // wait a frame
+
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(targetScene);
+
+        while (!asyncLoad.isDone)
+        {
+            yield return null;
+        }
+
+        // wait a couple frames for scene initialization
+        yield return null;
+        yield return null;
+
+        if (_datamoshController != null)
+        {
+            _datamoshController.SetMotionStrength(1f);
+        }
     }
 }

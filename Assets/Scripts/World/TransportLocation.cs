@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,6 +6,16 @@ public class TransportLocation : MonoBehaviour
 {
     [SerializeField] private string entryPointId; // Unique ID for this transport location
     [SerializeField] private string targetScene = "smallroom";
+
+    public DatamoshController datamoshController;
+
+    private void Start()
+    {
+        if (datamoshController == null)
+        {
+            datamoshController = FindObjectOfType<DatamoshController>();
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -19,8 +30,8 @@ public class TransportLocation : MonoBehaviour
                 currentScene
             );
 
-            // Load the hub scene
-            SceneManager.LoadScene(targetScene);
+            // SceneManager.LoadScene(targetScene);
+            SceneTransitionManager.Instance.LoadSceneWithSequence(targetScene);
         }
     }
 

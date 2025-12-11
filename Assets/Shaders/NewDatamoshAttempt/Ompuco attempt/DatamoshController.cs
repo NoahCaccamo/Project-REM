@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -68,6 +69,11 @@ public class DatamoshController : MonoBehaviour
     private bool isDecayAnimating = false;
     private float decayStartTime = 0f;
     private float currentThreshold = 2f;
+    private float activeDecayDuration = 5f; // actual duration used in current decay
+
+    // Motion strength control
+    private Coroutine motionStrengthCoroutine = null;
+    private float storedMotionStrength = 1.0f;
 
     private void Awake()
     {
@@ -113,6 +119,8 @@ public class DatamoshController : MonoBehaviour
         {
             Debug.Log($"DatamoshController: Started - MotionStrength: {motionStrength}, Opacity: {effectOpacity}");
         }
+
+        UniversalRenderPipelineUtils.SetRendererFeatureActive<FullScreenPassRendererFeature>(false);
     }
 
     private void Update()
@@ -131,14 +139,9 @@ public class DatamoshController : MonoBehaviour
         // Handle manual capture input
         if (Input.GetKeyDown(captureKey))
         {
-            ResetEffect();
-
-
-            CaptureFrame();
-            SetEffectOpacity(0.02f); // was 0.03
-            enablePixelDecay = enabled;
-            // reset threshold too?
-            StartDecayAnimation();
+            StartDatamosh();
+            // temp telly smelly
+            SceneTransitionManager.Instance.LoadSceneWithSequence("Level1");
         }
 
         // Handle reset input
@@ -162,7 +165,7 @@ public class DatamoshController : MonoBehaviour
     /// </summary>
     private void UpdateDecayAnimation()
     {
-        if (decayDuration <= 0f)
+        if (activeDecayDuration <= 0f)
         {
             // Instant transition
             currentThreshold = endThreshold;
@@ -170,8 +173,10 @@ public class DatamoshController : MonoBehaviour
             return;
         }
 
+        //TODO: only start the pixel decay after a short delay.
+
         float elapsed = Time.time - decayStartTime;
-        float normalizedTime = Mathf.Clamp01(elapsed / decayDuration);
+        float normalizedTime = Mathf.Clamp01(elapsed / activeDecayDuration);
 
         // Apply animation curve
         float curveValue = decayCurve.Evaluate(normalizedTime);
@@ -183,11 +188,66 @@ public class DatamoshController : MonoBehaviour
             // Stop animating
             isDecayAnimating = false;
             SetEffectOpacity(1.0f);
+            UniversalRenderPipelineUtils.SetRendererFeatureActive<FullScreenPassRendererFeature>(false);
+            ResetEffect();
             if (debugMode)
             {
                 Debug.Log($"Decay animation cycle complete - Current threshold: {currentThreshold}");
             }
         }
+    }
+
+    public void StartDatamosh(float? customDecayDuration = null)
+    {
+        UniversalRenderPipelineUtils.SetRendererFeatureActive<FullScreenPassRendererFeature>(true);
+        CaptureFrame();
+        SetEffectOpacity(0.0f); // was 0.03
+        enablePixelDecay = enabled;
+        // reset threshold too?
+        if (customDecayDuration.HasValue)
+        {
+            activeDecayDuration = customDecayDuration.Value;
+        } else
+        {
+            activeDecayDuration = decayDuration;
+        }
+
+            StartDecayAnimation();
+    }
+
+    public void DisableMotionStrengthTemporarily(float duration)
+    {
+        // Stop any existing coroutine
+        if (motionStrengthCoroutine != null)
+        {
+            StopCoroutine(motionStrengthCoroutine);
+        }
+
+        motionStrengthCoroutine = StartCoroutine(DisableMotionStrengthCoroutine(duration));
+    }
+
+    private IEnumerator DisableMotionStrengthCoroutine(float duration)
+    {
+        if (debugMode)
+        {
+            Debug.Log($"Disabling motion strength for {duration} seconds. Current value: {storedMotionStrength}");
+        }
+
+        // Set motion strength to 0
+        SetMotionStrength(0f);
+
+        // Wait for the specified duration
+        yield return new WaitForSeconds(duration);
+
+        // Restore motion strength to 1
+        SetMotionStrength(1f);
+
+        if (debugMode)
+        {
+            Debug.Log("Motion strength restored to 1.0");
+        }
+
+        motionStrengthCoroutine = null;
     }
 
     /// <summary>
@@ -266,6 +326,7 @@ public class DatamoshController : MonoBehaviour
         isEffectActive = false;
         isDecayAnimating = false;
         currentThreshold = startThreshold;
+        activeDecayDuration = decayDuration;
         SetEffectOpacity(1.0f);
 
         Debug.Log("Datamosh effect reset");

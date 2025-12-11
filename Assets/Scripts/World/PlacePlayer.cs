@@ -40,10 +40,38 @@ public class PlacePlayer : MonoBehaviour
         if (shouldSpawnHere)
         {
             controller.Motor.SetPosition(startPos.position);
-            controller.Motor.SetRotation(startPos.rotation);
+            // controller.Motor.SetRotation(startPos.rotation);
+            SetLookRotation();
 
             // Stop velocity
             controller.Motor.BaseVelocity = Vector3.zero;
+        }
+    }
+
+    // duplicate logic - also in checkpoint manager. Consider centralizing.
+    private void SetLookRotation()
+    {
+        ExampleCharacterCamera camera = FindObjectOfType<ExampleCharacterCamera>();
+        // move to seperate function
+        if (camera != null)
+        {
+            // Set the planar direction (horizontal look direction)
+            Vector3 forward = startPos.forward;
+            Vector3 planarDirection = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
+
+            if (planarDirection.sqrMagnitude > 0.01f)
+            {
+                camera.PlanarDirection = planarDirection;
+            }
+
+            // Set the camera transform rotation directly
+            // This will be smoothed by the camera system on the next update
+            float verticalAngle = -Mathf.Asin(forward.y) * Mathf.Rad2Deg;
+            verticalAngle = Mathf.Clamp(verticalAngle, camera.MinVerticalAngle, camera.MaxVerticalAngle);
+
+            Quaternion planarRot = Quaternion.LookRotation(planarDirection, Vector3.up);
+            Quaternion verticalRot = Quaternion.Euler(verticalAngle, 0, 0);
+            camera.Transform.rotation = planarRot * verticalRot;
         }
     }
 }

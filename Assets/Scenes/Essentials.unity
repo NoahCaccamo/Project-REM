@@ -2609,6 +2609,8 @@ GameObject:
   - component: {fileID: 5573864683772550980}
   - component: {fileID: 5573864683772550981}
   - component: {fileID: 5573864683772550984}
+  - component: {fileID: 5573864683772550986}
+  - component: {fileID: 5573864683772550985}
   m_Layer: 0
   m_Name: ExampleCamera
   m_TagString: MainCamera
@@ -2650,7 +2652,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
   m_Cameras: []
-  m_RendererIndex: 12
+  m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -2705,6 +2707,76 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13c8b1f5d76605f42a52602779607ab2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &5573864683772550985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5572022742420398803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a6b0ece2dd0e284a9aef666c7617300, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &5573864683772550986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5572022742420398803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52dea092fa13ef04a950d163532e3296, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  blitFeature: {fileID: -6494813318983210367, guid: e634585d5c4544dd297acaee93dc2beb,
+    type: 2}
+  captureKey: 103
+  resetKey: 104
+  motionStrength: 1
+  effectOpacity: 1
+  enablePixelDecay: 1
+  startThreshold: 1.73
+  endThreshold: 0.1
+  decayDuration: 7.8
+  decayCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.5937539
+      value: 0.17138162
+      inSlope: 0.9566237
+      outSlope: 0.9566237
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.2205054
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  captureOnStart: 0
+  captureDelay: 0
+  debugMode: 0
 --- !u!23 &6486330055653890480
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -3238,7 +3310,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Character: {fileID: 6611558534064293502}
-  currentCheckpoint: {x: 0, y: 0, z: 0}
+  currentCheckpointPosition: {x: 0, y: 0, z: 0}
+  currentCheckpointRotation: {x: 0, y: 0, z: 0, w: 0}
+  currentCheckpointTransform: {fileID: 0}
   checkpointSceneName: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

@@ -4,14 +4,17 @@ using UnityEngine.SceneManagement;
 public class Checkpoint : MonoBehaviour
 {
     private CheckpointManager checkpointManager;
-    private Vector3 checkpointTransform;
+
+    // DEPRICATE
+    private Vector3 checkpointPosition;
+    private Quaternion checkpointRotation;
+
+    public Transform spawnTransform;
     public string scene;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         checkpointManager = CheckpointManager.Instance;
-        checkpointTransform = this.transform.position;
-
 
         Scene thisScene = gameObject.scene;
 
@@ -29,7 +32,7 @@ public class Checkpoint : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            checkpointManager.SetCheckpoint(checkpointTransform, scene);
+            checkpointManager.SetCheckpoint(spawnTransform, scene);
         }
     }
 

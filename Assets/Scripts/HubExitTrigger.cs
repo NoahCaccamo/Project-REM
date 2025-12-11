@@ -13,7 +13,7 @@ public class HubExitTrigger : MonoBehaviour
             {
                 // Load the scene the player came from
                 // The transition manager still has the return entry point ID stored
-                SceneManager.LoadScene(previousScene);
+                SceneTransitionManager.Instance.LoadSceneWithSequence(previousScene);
             }
             else
             {
