@@ -29,6 +29,7 @@ namespace KinematicCharacterController.Examples
         public float MoveAxisRight;
         public Quaternion CameraRotation;
         public bool JumpDown;
+        public bool JumpHeld;
         public bool CrouchDown;
         public bool CrouchUp;
         public bool LeftHand;
@@ -80,6 +81,15 @@ namespace KinematicCharacterController.Examples
         public float JumpScalableForwardSpeed = 10f;
         public float JumpPreGroundingGraceTime = 0f;
         public float JumpPostGroundingGraceTime = 0f;
+
+        [Header("Bounce")]
+        public bool EnableBounce = true;
+        public float BounceSpeed = 15f;
+        public float BounceSpeedMultiplier = 1.2f;
+        public float MinBounceSpeed = 10f;
+        public float MaxBounceSpeed = 30f;
+        public float BounceAirAccelerationMultiplier = 0.3f;
+        public float BounceVelocityRedirection = 0.5f; // 0 = no redirection, 1 = full redirection
 
         [Header("Hands")]
         public float grabRadius = 0.1f;
@@ -145,6 +155,12 @@ namespace KinematicCharacterController.Examples
         private bool _shouldBeCrouching = false;
         private bool _isCrouching = false;
 
+        private bool _jumpHeld = false;
+        private bool _shouldBounceOnLanding = false;
+        private Vector3 _velocityBeforeLanding = Vector3.zero;
+        private bool _isBouncing = false;
+        private float _normalAirAcceleration;
+
         private Vector3 lastInnerNormal = Vector3.zero;
         private Vector3 lastOuterNormal = Vector3.zero;
 
@@ -160,6 +176,9 @@ namespace KinematicCharacterController.Examples
             playerCamera = Camera.main;
 
             playerCharacter = GetComponent<PlayerCharacter>();
+
+            // Store the normal air acceleration for bounce restoration
+            _normalAirAcceleration = AirAccelerationSpeed;
         }
 
         /// <summary>
@@ -256,6 +275,9 @@ namespace KinematicCharacterController.Examples
                             _timeSinceJumpRequested = 0f;
                             _jumpRequested = true;
                         }
+
+                        // Track if jump is being held for bounce
+                        _jumpHeld = inputs.JumpHeld;
 
                         // Crouching input
                         if (inputs.CrouchDown)
@@ -967,10 +989,15 @@ namespace KinematicCharacterController.Examples
                         // Air movement
                         else
                         {
+                            // Use modified air acceleration if bouncing
+                            float currentAirAcceleration = _isBouncing
+                                ? _normalAirAcceleration * BounceAirAccelerationMultiplier
+                                : AirAccelerationSpeed;
+
                             // Add move input
                             if (_moveInputVector.sqrMagnitude > 0f)
                             {
-                                Vector3 addedVelocity = _moveInputVector * AirAccelerationSpeed * deltaTime;
+                                Vector3 addedVelocity = _moveInputVector * currentAirAcceleration * deltaTime;
 
                                 Vector3 currentVelocityOnInputsPlane = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
 
@@ -1897,6 +1924,12 @@ namespace KinematicCharacterController.Examples
             {
                 OnLeaveStableGround();
             }
+
+            // Store velocity while airborne for bounce calculation
+            if (!Motor.GroundingStatus.IsStableOnGround)
+            {
+                _velocityBeforeLanding = Motor.BaseVelocity;
+            }
         }
 
         public bool IsColliderValidForCollisions(Collider coll)
@@ -1940,6 +1973,46 @@ namespace KinematicCharacterController.Examples
 
         protected void OnLanded()
         {
+            // Check if player should bounce on landing
+            if (EnableBounce && _jumpHeld && !Motor.LastGroundingStatus.IsStableOnGround)
+            {
+                // Get the surface normal we landed on
+                Vector3 bounceNormal = Motor.GroundingStatus.GroundNormal;
+
+                // Calculate the speed at which player was moving toward the surface
+                // Project velocity onto the inverse of the surface normal (downward component relative to surface)
+                float impactSpeed = Mathf.Abs(Vector3.Dot(_velocityBeforeLanding, -bounceNormal));
+
+                // Scale bounce speed based on impact speed
+                float scaledBounceSpeed = impactSpeed * BounceSpeedMultiplier;
+
+                // Clamp to min/max values
+                scaledBounceSpeed = Mathf.Clamp(scaledBounceSpeed, MinBounceSpeed, MaxBounceSpeed);
+
+                // Calculate the perpendicular bounce component
+                Vector3 bounceVelocity = bounceNormal * scaledBounceSpeed;
+
+                // Get the tangential (parallel to surface) component of velocity to preserve
+                Vector3 tangentialVelocity = Vector3.ProjectOnPlane(_velocityBeforeLanding, bounceNormal);
+
+                // Combine bounce with preserved tangential velocity
+                Vector3 finalBounceVelocity = bounceVelocity + (tangentialVelocity * BounceVelocityRedirection);
+
+                // CRITICAL: Set velocity directly by canceling current velocity and applying new one
+                // Motor.BaseVelocity is the current velocity at landing (should be ~0 after ground snap)
+                _internalVelocityAdd = finalBounceVelocity - Motor.BaseVelocity;
+
+                // Set bouncing state to reduce air control
+                _isBouncing = true;
+
+                // Force unground to allow the bounce to take effect
+                Motor.ForceUnground();
+            }
+            else
+            {
+                // Normal landing - restore air acceleration
+                _isBouncing = false;
+            }
         }
 
         protected void OnLeaveStableGround()
