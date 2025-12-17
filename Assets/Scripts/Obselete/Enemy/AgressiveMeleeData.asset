@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf0f8f61b0f7be548a046a925c75d246, type: 3}
+  m_Name: AgressiveMeleeData
+  m_EditorClassIdentifier: 
+  initialState: 0
+  attackState: 5
+  chaseState: 0
+  attackOptions:
+  - name: EnemyPawnch
+    stateIndex: 5
+    minRange: 0
+    maxRange: 2
+    weight: 0
+    cooldown: 60
+    cooldownTimer: -0.5664315
+  - name: jawmp
+    stateIndex: 29
+    minRange: 0
+    maxRange: 2
+    weight: 0
+    cooldown: 60
+    cooldownTimer: -0.92994237
+  hp: 8
+  maxArmor: 0
+  sightRange: 10
+  attackRange: 2
+  moveSpeed: 0.02
+  attackCooldownDuration: 60

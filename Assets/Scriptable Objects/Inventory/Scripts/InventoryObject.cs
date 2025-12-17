@@ -30,10 +30,16 @@ public class InventorySlot
 {
     public ItemObject item;
     public int amount;
+
+    public Vector3 localPosition;
+    public Quaternion localRotation;
+    
     public InventorySlot(ItemObject _item, int _amount)
     {
         item = _item;
         amount = _amount;
+        localPosition = Vector3.zero;
+        localRotation = Quaternion.identity;
     }
     public void AddAmount(int value)
     {

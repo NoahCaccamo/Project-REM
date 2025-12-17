@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f207f0cebf993e42a2d280a4ad121fc, type: 3}
+  m_Name: Spear
+  m_EditorClassIdentifier: 
+  prefab: {fileID: 2689347651003962251, guid: c7477b70dd3ddd247942025b982c1b38, type: 3}
+  altPrefab: {fileID: 2689347651003962251, guid: c8f293703d807804ba46d3cc7a19b0be,
+    type: 3}
+  heldModel: {fileID: 2689347651003962251, guid: 3cc160b0cbecd9a47b6a02a36e81d852,
+    type: 3}
+  type: 3
+  description: Throw it!
+  spdBonus: 0
+  defBonus: 0
+  throwForce: 25
+  recoilForce: 8

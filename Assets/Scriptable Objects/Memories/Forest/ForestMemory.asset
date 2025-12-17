@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a61580510375bf24d8ddd6932ef13c0c, type: 3}
+  m_Name: ForestMemory
+  m_EditorClassIdentifier: 
+  themeName: Forest
+  accentColor: {r: 0.21933962, g: 0.8773585, b: 0.41248694, a: 1}
+  environmentMaterial: {fileID: -8067726398312463513, guid: d3a9bc6d2c2e6ff4caaf7a34c1c43ef4,
+    type: 3}
+  ambientMusic: {fileID: 8300000, guid: 9987f456a6216b24b81c1efac5119f63, type: 3}
+  roomPrefabs:
+  - {fileID: 1024811416611036306, guid: 966e47c86bf31a14e822bcea3412d332, type: 3}
+  crumbPrefabs:
+  - {fileID: 6303952090746465708, guid: 643da39c9d7a9cd43a5b5bbbcc8db044, type: 3}
+  - {fileID: 7651307838953076487, guid: f98f280e57a8dfe44bd5316a2ae0bebc, type: 3}
+  - {fileID: 7728542839114645221, guid: c3cb83154fb091740b40fd24c7bf3452, type: 3}
+  - {fileID: 7728542839114645221, guid: c3cb83154fb091740b40fd24c7bf3452, type: 3}
+  modifiers:
+  - {fileID: 11400000, guid: 266e87f176525e14d8fb40669d07e9fc, type: 2}
+  pickupLocation: TowerPickup
+  dropoffLocation: HallwayDropoff

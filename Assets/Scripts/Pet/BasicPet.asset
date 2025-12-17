@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65d86e29cbd18a6429b0f6e6f69b6645, type: 3}
+  m_Name: BasicPet
+  m_EditorClassIdentifier: 
+  initialState: 0
+  chaseState: 0
+  actionOptions:
+  - name: dsa
+    stateIndex: 0
+    minRange: 0
+    maxRange: 0
+    weight: 0
+    cooldown: 0
+    cooldownTimer: 0
+  hunger: 5
+  sightRange: 10
+  interactRange: 2
+  moveSpeed: 0.02
+  actionCooldown: 60

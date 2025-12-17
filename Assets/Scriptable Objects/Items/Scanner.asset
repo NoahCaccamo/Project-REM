@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd74fd4202c2b8940aaff7fd1d6d80d7, type: 3}
+  m_Name: Scanner
+  m_EditorClassIdentifier: 
+  prefab: {fileID: 3370694047284577968, guid: fafba0ffad26d9344aa0d6fe1f8b2d5e, type: 3}
+  altPrefab: {fileID: 0}
+  heldModel: {fileID: 3370694047284577968, guid: fe5d8bc667808c44bb65f3270857d42d,
+    type: 3}
+  type: 3
+  description: Scanner scans things and finds memories.
+  waypointDuration: 5
+  cooldown: 10
