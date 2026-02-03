@@ -17,6 +17,10 @@ MonoBehaviour:
     type: 3}
   heldModel: {fileID: 2689347651003962251, guid: 3cc160b0cbecd9a47b6a02a36e81d852,
     type: 3}
+  bagPrefabPhysics: {fileID: 8717334792534021639, guid: 0853f18858c797b4296012360d26d322,
+    type: 3}
+  bagPrefabVisual: {fileID: 8717855341673073774, guid: 6feb73147d9008e40aaa953249773b6f,
+    type: 3}
   type: 3
   description: Throw it!
   spdBonus: 0

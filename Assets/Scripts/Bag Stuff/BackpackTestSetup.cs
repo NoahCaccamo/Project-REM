@@ -1,3 +1,4 @@
+using KinematicCharacterController.Examples;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +9,7 @@ public class BackpackTestSetup : MonoBehaviour
 {
     [Header("References")]
     public BackpackSurface backpackSurface;
+    public ExampleCharacterController characterController;
 
     [Header("Test Item Settings")]
     [Tooltip("Prefab for physics object (with Rigidbody2D)")]
@@ -22,6 +24,16 @@ public class BackpackTestSetup : MonoBehaviour
     [Tooltip("Spawn radius around center")]
     public float spawnRadius = 1f;
 
+    [Header("World Item Settings")]
+    [Tooltip("ItemObject ScriptableObject to use for world items")]
+    public ItemObject testItemData;
+
+    [Tooltip("Prefab with ItemPickup component for world spawning")]
+    public GameObject worldItemPrefab;
+
+    [Tooltip("Distance from player to spawn world items")]
+    public float worldSpawnDistance = 3f;
+
     [Header("NavAgent Settings")]
     [Tooltip("Prefab for NavAgent (optional)")]
     public GameObject navAgentPrefab;
@@ -29,20 +41,34 @@ public class BackpackTestSetup : MonoBehaviour
     [Tooltip("Prefab for NavAgent visual representation")]
     public GameObject navAgentVisualPrefab;
 
+    [Header("Water System")]
+    public BackpackWaterSystem waterSystem;
+
     void Start()
     {
         if (backpackSurface == null)
         {
             backpackSurface = GetComponent<BackpackSurface>();
         }
+
+        if (characterController == null)
+        {
+            characterController = FindObjectOfType<ExampleCharacterController>();
+        }
     }
 
     void Update()
     {
-        // Press T to spawn test items
+        // Press T to spawn test items IN inventory
         if (Input.GetKeyDown(KeyCode.T))
         {
             SpawnTestItems();
+        }
+
+        // Press Y to spawn item in WORLD (for pickup testing)
+        if (Input.GetKeyDown(KeyCode.Y))
+        {
+            SpawnWorldItem();
         }
 
         // Press Tab to toggle backpack
@@ -62,6 +88,21 @@ public class BackpackTestSetup : MonoBehaviour
         {
             SpawnNavAgent();
         }
+
+        // Press Q to toggle water
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            if (waterSystem != null)
+            {
+                waterSystem.ToggleWaterContact();
+            }
+        }
+
+        // Press H to transfer item from hand to inventory
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            TransferHandItemToInventory();
+        }
     }
 
     void SpawnTestItems()
@@ -72,7 +113,7 @@ public class BackpackTestSetup : MonoBehaviour
             return;
         }
 
-        Debug.Log($"Spawning {numberOfTestItems} test items...");
+        Debug.Log($"Spawning {numberOfTestItems} test items IN INVENTORY...");
 
         for (int i = 0; i < numberOfTestItems; i++)
         {
@@ -106,6 +147,14 @@ public class BackpackTestSetup : MonoBehaviour
                 rb.linearDamping = 1f;
             }
 
+            // Add ItemPickup component with test data
+            ItemPickup pickup = physicsObj.GetComponent<ItemPickup>();
+            if (pickup == null && testItemData != null)
+            {
+                pickup = physicsObj.AddComponent<ItemPickup>();
+                // Note: You'll need to make ItemPickup.itemData settable or add a SetItemData method
+            }
+
             // Create visual representation
             if (testVisualPrefab != null)
             {
@@ -121,6 +170,167 @@ public class BackpackTestSetup : MonoBehaviour
         }
 
         Debug.Log($"Spawned {numberOfTestItems} test items successfully!");
+    }
+
+    /// <summary>
+    /// Spawns a pickupable item in the world in front of the player
+    /// </summary>
+    void SpawnWorldItem()
+    {
+        if (characterController == null)
+        {
+            Debug.LogError("Character controller not found!");
+            return;
+        }
+
+        Camera playerCamera = Camera.main;
+        if (playerCamera == null)
+        {
+            Debug.LogError("Main camera not found!");
+            return;
+        }
+
+        // Calculate spawn position in front of player
+        Vector3 spawnPosition = characterController.transform.position +
+                               playerCamera.transform.forward * worldSpawnDistance +
+                               Vector3.up * 1.5f; // At chest height
+
+        GameObject worldItem;
+
+        if (worldItemPrefab != null)
+        {
+            // Use provided prefab
+            worldItem = Instantiate(worldItemPrefab, spawnPosition, Quaternion.identity);
+        }
+        else
+        {
+            // Create default world item
+            worldItem = CreateDefaultWorldItem(spawnPosition);
+        }
+
+        Debug.Log($"Spawned world item at {spawnPosition} for pickup testing");
+    }
+
+    /// <summary>
+    /// Creates a default pickupable world item with ItemPickup component
+    /// </summary>
+    GameObject CreateDefaultWorldItem(Vector3 position)
+    {
+        GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        obj.transform.position = position;
+        obj.transform.localScale = Vector3.one * 0.5f;
+        obj.name = "WorldTestItem";
+
+        // Add Rigidbody for physics
+        Rigidbody rb = obj.AddComponent<Rigidbody>();
+        rb.mass = 1f;
+
+        // Make it a nice color
+        MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+        if (renderer != null)
+        {
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = new Color(1f, 0.8f, 0.2f); // Gold color
+            renderer.material = mat;
+        }
+
+        // Add ItemPickup component
+        ItemPickup pickup = obj.AddComponent<ItemPickup>();
+        if (testItemData != null)
+        {
+            // If you have SetItemData method:
+            // pickup.SetItemData(testItemData);
+
+            // Otherwise, you'll need to set it via reflection or make itemData public
+            Debug.Log("Added ItemPickup component - assign ItemData in inspector or via SetItemData method");
+        }
+
+        // Set to interactable layer
+        obj.layer = LayerMask.NameToLayer("Interactable");
+
+        return obj;
+    }
+
+    /// <summary>
+    /// Transfers item from player's hand to the inventory
+    /// </summary>
+    void TransferHandItemToInventory()
+    {
+        if (characterController == null || backpackSurface == null)
+        {
+            Debug.LogError("Missing references for hand-to-inventory transfer!");
+            return;
+        }
+
+        // Check left hand first
+        Hand sourceHand = null;
+        if (!characterController.leftHand.IsEmpty)
+        {
+            sourceHand = characterController.leftHand;
+        }
+        else if (!characterController.rightHand.IsEmpty)
+        {
+            sourceHand = characterController.rightHand;
+        }
+        else
+        {
+            Debug.Log("Both hands are empty - nothing to transfer!");
+            return;
+        }
+
+        // Get the item data
+        ItemObject itemData = sourceHand.heldItem;
+
+        if (itemData == null || itemData.bagPrefabPhysics == null)
+        {
+            Debug.LogError("Hand item has no data or prefab!");
+            return;
+        }
+
+        // Spawn in physics world at center
+        Vector3 spawnPos = Vector3.zero; // Center of backpack
+        GameObject physicsObj = Instantiate(itemData.bagPrefabPhysics, backpackSurface.physicsWorldRoot);
+        physicsObj.transform.localPosition = spawnPos;
+        physicsObj.transform.localRotation = Quaternion.identity;
+        physicsObj.name = $"TransferredItem_{itemData.name}";
+
+        // Setup physics
+        Rigidbody2D rb = physicsObj.GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = physicsObj.AddComponent<Rigidbody2D>();
+        }
+        rb.gravityScale = 1;
+        rb.linearDamping = 1f;
+        rb.isKinematic = false;
+
+        // Add ItemPickup if missing
+        ItemPickup pickup = physicsObj.GetComponent<ItemPickup>();
+        if (pickup == null)
+        {
+            pickup = physicsObj.AddComponent<ItemPickup>();
+        }
+
+        // Create visual if altPrefab exists
+        if (itemData.altPrefab != null)
+        {
+            backpackSurface.CreateVisualForPhysicsObject(rb, itemData.bagPrefabVisual);
+        }
+        else
+        {
+            Debug.LogWarning($"No visual prefab (altPrefab) for {itemData.name}");
+        }
+
+        // Add to inventory data
+        var slot = new InventorySlot(itemData, 1);
+        slot.localPosition = spawnPos;
+        slot.localRotation = Quaternion.identity;
+        backpackSurface.inventoryData.Container.Add(slot);
+
+        // Drop from hand
+        sourceHand.Drop();
+
+        Debug.Log($"Transferred {itemData.name} from hand to inventory");
     }
 
     void SpawnNavAgent()
@@ -155,7 +365,7 @@ public class BackpackTestSetup : MonoBehaviour
         if (rb == null)
         {
             rb = agentPhysicsObj.AddComponent<Rigidbody2D>();
-            rb.gravityScale = 0;
+            rb.gravityScale = 1;
             rb.linearDamping = 1f;
         }
 
@@ -333,21 +543,33 @@ public class BackpackTestSetup : MonoBehaviour
             }
         }
 
+        // Clear inventory data
+        if (backpackSurface.inventoryData != null)
+        {
+            backpackSurface.inventoryData.Container.Clear();
+        }
+
         Debug.Log("Cleared all test items and NavAgents");
     }
 
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(10, 10, 350, 250));
+        GUILayout.BeginArea(new Rect(10, 10, 400, 320));
         GUILayout.Label("=== Backpack Test Controls ===");
-        GUILayout.Label("T - Spawn Test Items");
+        GUILayout.Label("T - Spawn Test Items IN Inventory");
+        GUILayout.Label("Y - Spawn World Item (for pickup)");
+        GUILayout.Label("H - Transfer Hand Item to Inventory");
         GUILayout.Label("N - Spawn NavAgent");
         GUILayout.Label("Tab - Toggle Backpack Open/Close");
         GUILayout.Label("C - Clear All Items");
+        GUILayout.Label("Q - Toggle Water Contact");
         GUILayout.Label("Arrow Keys - Apply Bump Force");
         GUILayout.Label("Space - NavAgent Seek New Edge");
         GUILayout.Label("Click & Hold - Drag Items");
-        GUILayout.Label("Quick Click - Pickup Item");
+        GUILayout.Label("Quick Click - Pickup Item from Inventory");
+        GUILayout.Label("Left Click (on world item) - Pickup to Hand");
+
+        GUILayout.Label(""); // Spacer
 
         if (backpackSurface != null && backpackSurface.visualPlane != null)
         {
@@ -355,11 +577,26 @@ public class BackpackTestSetup : MonoBehaviour
             GUILayout.Label($"Backpack Status: {(isOpen ? "OPEN" : "CLOSED")}");
         }
 
+        // Show hand status
+        if (characterController != null)
+        {
+            string leftHandStatus = characterController.leftHand.IsEmpty ? "Empty" : characterController.leftHand.heldItem.name;
+            string rightHandStatus = characterController.rightHand.IsEmpty ? "Empty" : characterController.rightHand.heldItem.name;
+            GUILayout.Label($"Left Hand: {leftHandStatus}");
+            GUILayout.Label($"Right Hand: {rightHandStatus}");
+        }
+
         // Show NavAgent count
         if (backpackSurface != null && backpackSurface.physicsWorldRoot != null)
         {
             BackpackNavAgent2D[] agents = backpackSurface.physicsWorldRoot.GetComponentsInChildren<BackpackNavAgent2D>();
             GUILayout.Label($"Active NavAgents: {agents.Length}");
+        }
+
+        if (waterSystem != null)
+        {
+            GUILayout.Label($"Water Contact: {(waterSystem.waterContactEnabled ? "ON" : "OFF")}");
+            GUILayout.Label($"Water Level: {(waterSystem.waterLevel * 100f):F1}%");
         }
 
         GUILayout.EndArea();
