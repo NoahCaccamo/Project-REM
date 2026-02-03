@@ -30,13 +30,18 @@ public class BackpackNavAgent2D : MonoBehaviour
     [Tooltip("Mass of the agent")]
     public float mass = 1f;
 
+    [Header("Bounds Settings")]
+    [Tooltip("Manual bounds definition (if no collider found)")]
+    public Vector2 boundsSize = new Vector2(4f, 3f);
+
     [Header("Debug")]
     public bool drawDebugLines = true;
 
     private Rigidbody2D rb2d;
     private Vector2 targetPosition;
     private bool hasTarget = false;
-    private MeshCollider backpackBounds;
+    private BoxCollider2D backpackBounds2D;
+    private bool useManualBounds = false;
 
     void Start()
     {
@@ -52,17 +57,30 @@ public class BackpackNavAgent2D : MonoBehaviour
         rb2d.mass = mass;
         rb2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
-        // Find the backpack bounds
-        if (backpackSurface != null && backpackSurface.backpackRoot != null)
+        // Find the backpack bounds in physics world
+        if (backpackSurface != null && backpackSurface.physicsWorldRoot != null)
         {
-            backpackBounds = backpackSurface.GetComponent<MeshCollider>();
+            backpackBounds2D = backpackSurface.physicsWorldRoot.GetComponentInChildren<BoxCollider2D>();
+
+            if (backpackBounds2D == null)
+            {
+                Debug.LogWarning("No BoxCollider2D found in PhysicsWorld! Using manual bounds.");
+                useManualBounds = true;
+            }
         }
+        else
+        {
+            Debug.LogWarning("BackpackSurface or PhysicsWorldRoot not assigned! Using manual bounds.");
+            useManualBounds = true;
+        }
+
+        SetTargetToEdge();
     }
 
     void Update()
     {
-        // Press space to set a new edge target
-        if (Input.GetKeyDown(KeyCode.Space))
+        // Press N to set a new edge target
+        if (Input.GetKeyDown(KeyCode.N))
         {
             SetTargetToEdge();
         }
@@ -81,16 +99,34 @@ public class BackpackNavAgent2D : MonoBehaviour
     /// </summary>
     public void SetTargetToEdge()
     {
-        if (backpackBounds == null)
+        Vector2 center;
+        Vector2 extents;
+
+        if (useManualBounds)
         {
-            Debug.LogWarning("No backpack bounds found! Make sure backpackRoot has a BoxCollider2D");
+            // Use manual bounds centered at physics world origin
+            if (backpackSurface != null && backpackSurface.physicsWorldRoot != null)
+            {
+                center = backpackSurface.physicsWorldRoot.position;
+            }
+            else
+            {
+                center = Vector2.zero;
+            }
+            extents = boundsSize * 0.5f;
+        }
+        else if (backpackBounds2D != null)
+        {
+            // Use collider bounds
+            Bounds bounds = backpackBounds2D.bounds;
+            center = bounds.center;
+            extents = bounds.extents;
+        }
+        else
+        {
+            Debug.LogWarning("No backpack bounds available!");
             return;
         }
-
-        // Get the bounds in world space
-        Bounds bounds = backpackBounds.bounds;
-        Vector2 center = bounds.center;
-        Vector2 extents = bounds.extents;
 
         Vector2 currentPos = transform.position;
 
@@ -202,12 +238,22 @@ public class BackpackNavAgent2D : MonoBehaviour
         }
 
         // Draw backpack bounds
-        if (backpackBounds != null)
+        Vector2 center = Vector2.zero;
+        Vector2 size = boundsSize;
+
+        if (backpackBounds2D != null)
         {
-            Gizmos.color = Color.yellow;
-            Bounds bounds = backpackBounds.bounds;
-            Gizmos.DrawWireCube(bounds.center, bounds.size);
+            Bounds bounds = backpackBounds2D.bounds;
+            center = bounds.center;
+            size = bounds.size;
         }
+        else if (backpackSurface != null && backpackSurface.physicsWorldRoot != null)
+        {
+            center = backpackSurface.physicsWorldRoot.position;
+        }
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireCube(center, size);
 
         // Draw velocity vector for debugging
         if (rb2d != null)
