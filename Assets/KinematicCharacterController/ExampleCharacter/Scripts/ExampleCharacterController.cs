@@ -7,6 +7,7 @@ using UnityEngine.Windows;
 using UnityEngine.UIElements;
 using static UnityEngine.UI.Image;
 using Unity.Burst.CompilerServices;
+using TMPro;
 
 namespace KinematicCharacterController.Examples
 {
@@ -14,7 +15,8 @@ namespace KinematicCharacterController.Examples
     {
         Default,
         Climbing,
-        Sliding
+        Sliding,
+        WallRunning
     }
 
     public enum OrientationMethod
@@ -64,6 +66,13 @@ namespace KinematicCharacterController.Examples
         public HandController LeftHandController;
         public HandController RightHandController;
 
+        [Header("Momentum System")]
+        public float currentSpeed;
+        public float momentumDecayRate = 0.5f;
+        public float maxMomentumSpeed = 25f;
+        public float speedRetentionOnLanding = 0.8f;
+        [SerializeField] private TextMeshProUGUI speedDisplay;
+
         [Header("Stable Movement")]
         public float MaxStableMoveSpeed = 10f;
         public float StableMovementSharpness = 15f;
@@ -73,6 +82,7 @@ namespace KinematicCharacterController.Examples
         [Header("Air Movement")]
         public float MaxAirMoveSpeed = 15f;
         public float AirAccelerationSpeed = 15f;
+        public float AirStrafeMultiplier = 1.5f;
         public float Drag = 0.1f;
 
         [Header("Jumping")]
@@ -81,6 +91,7 @@ namespace KinematicCharacterController.Examples
         public float JumpScalableForwardSpeed = 10f;
         public float JumpPreGroundingGraceTime = 0f;
         public float JumpPostGroundingGraceTime = 0f;
+        public bool PreserveHorizontalMomentumOnJump = true;
 
         [Header("Bounce")]
         public bool EnableBounce = true;
@@ -89,14 +100,38 @@ namespace KinematicCharacterController.Examples
         public float MinBounceSpeed = 10f;
         public float MaxBounceSpeed = 30f;
         public float BounceAirAccelerationMultiplier = 0.3f;
-        public float BounceVelocityRedirection = 0.5f; // 0 = no redirection, 1 = full redirection
+        public float BounceVelocityRedirection = 0.5f;
+
+        [Header("Wall Running")]
+        public bool EnableWallRunning = true;
+        public float WallRunSpeed = 12f;
+        public float WallRunMaxDuration = 2f;
+        public float WallRunGravityMultiplier = 0.2f;
+        public float WallRunJumpHeight = 12f;
+        public float WallRunJumpAwayForce = 8f;
+        public float WallRunJumpMomentumBoost = 1.15f;
+        public float WallRunDetectionDistance = 0.6f;
+        public float MinSpeedForWallRun = 5f;
+        public float WallRunCameraTilt = 15f;
+        public float CameraTiltSpeed = 8f;
+        public float WallRunSpeedDecay = 0.95f;
+        private bool _isWallRunning = false;
+        private bool _isWallRunningLeft = false;
+        private Vector3 _wallRunNormal;
+        private Vector3 _wallRunDirection; // NEW: Store wall run direction independently
+        private float _wallRunTimer = 0f;
+        private bool _canWallRun = true;
+        private float _wallRunCooldown = 0f;
+        private const float WALL_RUN_COOLDOWN_TIME = 0.3f;
+        private float _currentCameraTilt = 0f;
+        private float _wallRunEntrySpeed = 0f;
 
         [Header("Hands")]
         public float grabRadius = 0.1f;
         public float grabDistance = 0.2f;
 
         // Climb Variables
-        public float idealRadius = 0.8f; // distance hand-to-body should stay
+        public float idealRadius = 0.8f;
         public float springStrength = 20f;
         public float springDamping = 5f;
         public float climbMoveSpeed = 1f;
@@ -179,6 +214,110 @@ namespace KinematicCharacterController.Examples
 
             // Store the normal air acceleration for bounce restoration
             _normalAirAcceleration = AirAccelerationSpeed;
+
+            SetupSpeedDisplay();
+        }
+
+        private void SetupSpeedDisplay()
+        {
+            if (speedDisplay == null)
+            {
+                // Create Canvas
+                GameObject canvasObj = new GameObject("SpeedDisplayCanvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+                canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+                // Create TextMeshPro GameObject
+                GameObject textObj = new GameObject("SpeedText");
+                textObj.transform.SetParent(canvasObj.transform, false);
+
+                speedDisplay = textObj.AddComponent<TextMeshProUGUI>();
+                speedDisplay.fontSize = 36;
+                speedDisplay.alignment = TextAlignmentOptions.Center;
+                speedDisplay.color = Color.white;
+
+                // Position below center of screen
+                RectTransform rectTransform = textObj.GetComponent<RectTransform>();
+                rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+                rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                rectTransform.pivot = new Vector2(0.5f, 1f);
+                rectTransform.anchoredPosition = new Vector2(0f, -100f);
+                rectTransform.sizeDelta = new Vector2(400f, 100f);
+            }
+        }
+
+        private void Update()
+        {
+            UpdateSpeedDisplay();
+            UpdateWallRunCooldown();
+        }
+
+        private void LateUpdate()
+        {
+            // Camera tilt needs to be in LateUpdate to apply after camera controller
+            UpdateCameraTilt();
+        }
+
+        private void UpdateSpeedDisplay()
+        {
+            if (speedDisplay != null)
+            {
+                // Calculate horizontal speed
+                Vector3 horizontalVelocity = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
+                currentSpeed = horizontalVelocity.magnitude;
+
+                // Display speed with color coding
+                string colorTag = GetSpeedColorTag(currentSpeed);
+                speedDisplay.text = $"{colorTag}{currentSpeed:F1}</color> m/s";
+            }
+        }
+
+        private string GetSpeedColorTag(float speed)
+        {
+            if (speed < 5f) return "<color=#FFFFFF>";
+            if (speed < 10f) return "<color=#00FF00>";
+            if (speed < 15f) return "<color=#FFFF00>";
+            if (speed < 20f) return "<color=#FFA500>";
+            return "<color=#FF0000>";
+        }
+
+        /// <summary>
+        /// Updates camera tilt based on wall running state
+        /// </summary>
+        private void UpdateCameraTilt()
+        {
+            if (playerCamera == null) return;
+
+            float targetTilt = 0f;
+
+            if (CurrentCharacterState == CharacterState.WallRunning)
+            {
+                // Tilt camera based on which wall we're running on
+                targetTilt = _isWallRunningLeft ? -WallRunCameraTilt : WallRunCameraTilt;
+            }
+
+            // Smoothly interpolate to target tilt
+            _currentCameraTilt = Mathf.Lerp(_currentCameraTilt, targetTilt, Time.deltaTime * CameraTiltSpeed);
+
+            // Apply tilt by modifying the camera's current rotation (not localRotation)
+            // Get current rotation, extract euler angles, modify Z (roll), then reapply
+            Vector3 currentEuler = playerCamera.transform.eulerAngles;
+            currentEuler.z = _currentCameraTilt;
+            playerCamera.transform.rotation = Quaternion.Euler(currentEuler);
+        }
+
+        private void UpdateWallRunCooldown()
+        {
+            if (_wallRunCooldown > 0f)
+            {
+                _wallRunCooldown -= Time.deltaTime;
+                if (_wallRunCooldown <= 0f)
+                {
+                    _canWallRun = true;
+                }
+            }
         }
 
         /// <summary>
@@ -214,6 +353,27 @@ namespace KinematicCharacterController.Examples
                         _hasMovedWhileClimbing = false;
                         break;
                     }
+                case CharacterState.WallRunning:
+                    {
+                        _wallRunTimer = 0f;
+                        // Store current horizontal speed when entering wall run
+                        Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
+                        _wallRunEntrySpeed = horizontalVel.magnitude;
+
+                        // Calculate and store initial wall run direction
+                        Vector3 wallForward = Vector3.Cross(_wallRunNormal, Motor.CharacterUp).normalized;
+                        if (Vector3.Dot(wallForward, Motor.CharacterForward) < 0f)
+                        {
+                            wallForward = -wallForward;
+                        }
+                        _wallRunDirection = wallForward;
+                        break;
+                    }
+                case CharacterState.Sliding:
+                    {
+                        _slideMomentumBoostTimer = 0f;
+                        break;
+                    }
             }
         }
 
@@ -231,6 +391,13 @@ namespace KinematicCharacterController.Examples
                 case CharacterState.Climbing:
                     {
                         _hasMovedWhileClimbing = false;
+                        break;
+                    }
+                case CharacterState.WallRunning:
+                    {
+                        _isWallRunning = false;
+                        _wallRunCooldown = WALL_RUN_COOLDOWN_TIME;
+                        _canWallRun = false;
                         break;
                     }
             }
@@ -318,11 +485,74 @@ namespace KinematicCharacterController.Examples
                         break;
                     }
 
+                case CharacterState.WallRunning:
+                    {
+                        // Store raw input for wall running - don't transform by camera
+                        _moveInputVector = cameraPlanarRotation * moveInputVector;
+
+                        // Look direction still follows camera, but doesn't affect wall run direction
+                        switch (OrientationMethod)
+                        {
+                            case OrientationMethod.TowardsCamera:
+                                _lookInputVector = cameraPlanarDirection;
+                                break;
+                            case OrientationMethod.TowardsMovement:
+                                // During wall run, look towards wall run direction instead of input
+                                _lookInputVector = _wallRunDirection;
+                                break;
+                        }
+
+                        // Jumping input
+                        if (inputs.JumpDown)
+                        {
+                            _timeSinceJumpRequested = 0f;
+                            _jumpRequested = true;
+                        }
+
+                        // Track if jump is being held for bounce
+                        _jumpHeld = inputs.JumpHeld;
+
+                        // Crouching input
+                        if (inputs.CrouchDown)
+                        {
+                            _shouldBeCrouching = true;
+
+                            if (!_isCrouching)
+                            {
+                                _isCrouching = true;
+                                Motor.SetCapsuleDimensions(0.5f, CrouchedCapsuleHeight, CrouchedCapsuleHeight * 0.5f);
+                                MeshRoot.localScale = new Vector3(1f, 0.5f, 1f);
+                            }
+                        }
+                        else if (inputs.CrouchUp)
+                        {
+                            _shouldBeCrouching = false;
+                        }
+
+                        // Grab input
+                        wantsGrabL = inputs.LeftHand;
+                        wantsGrabR = inputs.RightHand;
+                        grabLDown = inputs.LeftHandDown;
+                        grabRDown = inputs.RightHandDown;
+
+                        if (grabLDown)
+                        {
+                            _interactRequestedL = true;
+                        }
+
+                        if (grabRDown)
+                        {
+                            _interactRequestedR = true;
+                        }
+
+                        // sprint
+                        _sprintPressed = inputs.SprintDown;
+
+                        break;
+                    }
+
                 case CharacterState.Sliding:
                     {
-                        // Move and look inputs
-                      //  _moveInputVector = cameraPlanarRotation * moveInputVector;
-
                         switch (OrientationMethod)
                         {
                             case OrientationMethod.TowardsCamera:
@@ -435,7 +665,6 @@ namespace KinematicCharacterController.Examples
                     break;
             }
 
-            // D
             pickup.OnPickedUp();
         }
 
@@ -454,7 +683,8 @@ namespace KinematicCharacterController.Examples
                 {
                     _interactRequestedL = false;
                     return;
-                } else
+                }
+                else
                 {
                     _interactRequestedR = false;
                     return;
@@ -669,7 +899,8 @@ namespace KinematicCharacterController.Examples
                 TransitionToState(CharacterState.Climbing);
                 _jumpConsumed = false;
                 Motor.ForceUnground();
-            } else
+            }
+            else
             {
                 if (DetectLedge(out Vector3 grabPoint, out Vector3 grabNormal))
                 {
@@ -712,7 +943,8 @@ namespace KinematicCharacterController.Examples
                 TransitionToState(CharacterState.Climbing);
                 _jumpConsumed = false;
                 Motor.ForceUnground();
-            } else
+            }
+            else
             {
                 if (DetectLedge(out Vector3 grabPoint, out Vector3 grabNormal))
                 {
@@ -785,6 +1017,42 @@ namespace KinematicCharacterController.Examples
             return false;
         }
 
+        /// <summary>
+        /// Detects walls suitable for wall running
+        /// </summary>
+        private bool DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall)
+        {
+            wallNormal = Vector3.zero;
+            isLeftWall = false;
+
+            Vector3 rightDir = Motor.CharacterRight;
+            Vector3 leftDir = -Motor.CharacterRight;
+
+            // Check right side
+            if (Physics.Raycast(Motor.TransientPosition, rightDir, out RaycastHit rightHit, WallRunDetectionDistance, wallLayer, QueryTriggerInteraction.Ignore))
+            {
+                if (Vector3.Dot(rightHit.normal, Vector3.up) < 0.1f) // Wall is mostly vertical
+                {
+                    wallNormal = rightHit.normal;
+                    isLeftWall = false;
+                    return true;
+                }
+            }
+
+            // Check left side
+            if (Physics.Raycast(Motor.TransientPosition, leftDir, out RaycastHit leftHit, WallRunDetectionDistance, wallLayer, QueryTriggerInteraction.Ignore))
+            {
+                if (Vector3.Dot(leftHit.normal, Vector3.up) < 0.1f)
+                {
+                    wallNormal = leftHit.normal;
+                    isLeftWall = true;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         void OnDrawGizmos()
         {
             if (Motor == null) return;
@@ -804,16 +1072,20 @@ namespace KinematicCharacterController.Examples
             Gizmos.DrawWireSphere(origin, grabRadius);
             Gizmos.DrawWireSphere(end, grabRadius);
 
-
-            /*
-            // If we had a hit, draw that too
-            if (lastHit.collider != null)
+            // Draw wall run detection rays
+            if (EnableWallRunning && Motor != null)
             {
-                Gizmos.color = Color.green;
-                Gizmos.DrawWireSphere(lastHit.point, grabRadius * 0.5f);
-                Gizmos.DrawRay(lastHit.point, lastHit.normal);
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawRay(Motor.TransientPosition, Motor.CharacterRight * WallRunDetectionDistance);
+                Gizmos.DrawRay(Motor.TransientPosition, -Motor.CharacterRight * WallRunDetectionDistance);
             }
-            */
+
+            // Draw wall run direction when active
+            if (CurrentCharacterState == CharacterState.WallRunning)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawRay(Motor.TransientPosition, _wallRunDirection * 2f);
+            }
         }
 
         /// <summary>
@@ -886,6 +1158,19 @@ namespace KinematicCharacterController.Examples
                 }
             }
 
+            // Wall run detection
+            if (EnableWallRunning && CurrentCharacterState == CharacterState.Default && !Motor.GroundingStatus.IsStableOnGround && _canWallRun)
+            {
+                Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
+                if (horizontalVel.magnitude >= MinSpeedForWallRun)
+                {
+                    if (DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
+                    {
+                        StartWallRun(wallNormal, isLeftWall);
+                    }
+                }
+            }
+
         }
 
         /// <summary>
@@ -941,6 +1226,28 @@ namespace KinematicCharacterController.Examples
                         }
                         break;
                     }
+
+                case CharacterState.WallRunning:
+                    {
+                        // During wall running, orient towards wall run direction, not camera
+                        if (_wallRunDirection.sqrMagnitude > 0f && OrientationSharpness > 0f)
+                        {
+                            currentRotation = Quaternion.LookRotation(_wallRunDirection, Motor.CharacterUp);
+                        }
+
+                        Vector3 currentUp = (currentRotation * Vector3.up);
+                        if (BonusOrientationMethod == BonusOrientationMethod.TowardsGravity)
+                        {
+                            Vector3 smoothedGravityDir = Vector3.Slerp(currentUp, -playerCharacter.CurrentStats.gravity.normalized, 1 - Mathf.Exp(-BonusOrientationSharpness * deltaTime));
+                            currentRotation = Quaternion.FromToRotation(currentUp, smoothedGravityDir) * currentRotation;
+                        }
+                        else
+                        {
+                            Vector3 smoothedGravityDir = Vector3.Slerp(currentUp, Vector3.up, 1 - Mathf.Exp(-BonusOrientationSharpness * deltaTime));
+                            currentRotation = Quaternion.FromToRotation(currentUp, smoothedGravityDir) * currentRotation;
+                        }
+                        break;
+                    }
             }
         }
 
@@ -974,8 +1281,9 @@ namespace KinematicCharacterController.Examples
 
                             float speed = _sprintPressed ? sprintSpeed : walkSpeed;
 
-                            // temp fov proto
-                            playerCamera.fieldOfView = _sprintPressed ? 85 : 75;
+                            // Dynamic FOV based on actual speed for visual feedback
+                            float targetFOV = 75f + Mathf.Clamp((currentSpeed - 5f) * 2f, 0f, 20f);
+                            playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, Time.deltaTime * 5f);
 
                             Vector3 targetMovementVelocity = reorientedInput * speed;
 
@@ -994,10 +1302,10 @@ namespace KinematicCharacterController.Examples
                                 ? _normalAirAcceleration * BounceAirAccelerationMultiplier
                                 : AirAccelerationSpeed;
 
-                            // Add move input
+                            // Enhanced air strafing
                             if (_moveInputVector.sqrMagnitude > 0f)
                             {
-                                Vector3 addedVelocity = _moveInputVector * currentAirAcceleration * deltaTime;
+                                Vector3 addedVelocity = _moveInputVector * currentAirAcceleration * AirStrafeMultiplier * deltaTime;
 
                                 Vector3 currentVelocityOnInputsPlane = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
 
@@ -1038,7 +1346,7 @@ namespace KinematicCharacterController.Examples
                             currentVelocity *= (1f / (1f + (Drag * deltaTime)));
                         }
 
-                        // Handle jumping
+                        // Handle jumping with CONSISTENT HEIGHT
                         _jumpedThisFrame = false;
                         _timeSinceJumpRequested += deltaTime;
                         if (_jumpRequested)
@@ -1057,9 +1365,12 @@ namespace KinematicCharacterController.Examples
                                 // If this line weren't here, the character would remain snapped to the ground when trying to jump. Try commenting this line out and see.
                                 Motor.ForceUnground();
 
-                                // Add to the return velocity and reset jump state
-                                currentVelocity += (jumpDirection * JumpUpSpeed) - Vector3.Project(currentVelocity, Motor.CharacterUp);
-                                currentVelocity += (_moveInputVector * JumpScalableForwardSpeed);
+                                // CONSISTENT JUMP HEIGHT: Zero out vertical component, preserve horizontal
+                                Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+
+                                // Set new velocity: preserved horizontal + FIXED vertical jump speed
+                                currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
+
                                 _jumpRequested = false;
                                 _jumpConsumed = true;
                                 _jumpedThisFrame = true;
@@ -1098,9 +1409,12 @@ namespace KinematicCharacterController.Examples
                                 // If this line weren't here, the character would remain snapped to the ground when trying to jump. Try commenting this line out and see.
                                 Motor.ForceUnground();
 
-                                // Add to the return velocity and reset jump state
-                                currentVelocity += (jumpDirection * JumpUpSpeed) - Vector3.Project(currentVelocity, Motor.CharacterUp);
-                                currentVelocity += (_moveInputVector * JumpScalableForwardSpeed);
+                                // SLIDE JUMP: Preserve horizontal momentum, CONSISTENT vertical jump (NO BOOST)
+                                Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+
+                                // Set velocity: preserved horizontal + FIXED vertical (consistent height)
+                                currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
+
                                 _jumpRequested = false;
                                 _jumpConsumed = true;
                                 _jumpedThisFrame = true;
@@ -1134,9 +1448,9 @@ namespace KinematicCharacterController.Examples
                                 // If this line weren't here, the character would remain snapped to the ground when trying to jump. Try commenting this line out and see.
                                 Motor.ForceUnground();
 
-                                // Add to the return velocity and reset jump state
-                                currentVelocity += (jumpDirection * JumpUpSpeed) - Vector3.Project(currentVelocity, Motor.CharacterUp);
-                                currentVelocity += (_moveInputVector * JumpScalableForwardSpeed);
+                                // CLIMB JUMP: Consistent upward velocity
+                                currentVelocity = (jumpDirection * JumpUpSpeed) + (_moveInputVector * JumpScalableForwardSpeed);
+
                                 _jumpRequested = false;
                                 _jumpConsumed = true;
                                 _jumpedThisFrame = true;
@@ -1151,21 +1465,57 @@ namespace KinematicCharacterController.Examples
                         }
                         break;
                     }
+
+                case CharacterState.WallRunning:
+                    {
+                        HandleWallRunning(ref currentVelocity, deltaTime);
+
+                        // Wall run jump
+                        if (_jumpRequested)
+                        {
+                            if (!_jumpConsumed)
+                            {
+                                Motor.ForceUnground();
+
+                                // WALL JUMP: Preserve ALL momentum and add boost
+                                Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+
+                                // Apply momentum boost to horizontal velocity
+                                horizontalVelocity *= WallRunJumpMomentumBoost;
+
+                                // Jump away from wall with fixed upward component
+                                Vector3 wallJumpVelocity = (_wallRunNormal * WallRunJumpAwayForce) + (Motor.CharacterUp * WallRunJumpHeight);
+
+                                currentVelocity = horizontalVelocity + wallJumpVelocity;
+
+                                _jumpRequested = false;
+                                _jumpConsumed = true;
+                                _jumpedThisFrame = true;
+
+                                TransitionToState(CharacterState.Default);
+                            }
+                        }
+                        break;
+                    }
             }
         }
 
-        private Vector3 _slideDirection;  // direction we started sliding in
-        private float _slideSpeed;        // speed at slide start
+        private Vector3 _slideDirection;
+        private float _slideSpeed;
 
-
-        [SerializeField] private float slideInitialBoost = 2f;
+        [Header("Sliding")]
+        [SerializeField] private float slideInitialBoost = 0f;
         [SerializeField] private float slideGravityMultiplier = 1.3f;
         [SerializeField] private float slideFriction = 2f;
         [SerializeField] private float maxSlideSpeed = 12f;
         [SerializeField] private float minSlideAngle = 10f;
+        [SerializeField] private float flatFrictionMultiplier = 5f;
 
-        // flat ground friction
-        [SerializeField] private float flatFrictionMultiplier = 5f; // multiply slideFriction on flat
+        [Header("Slide Momentum Boost")]
+        [SerializeField] private float slideMinMomentumThreshold = 8f;
+        [SerializeField] private float slideMomentumBoostDuration = 0.5f;
+        private float _slideMomentumBoostTimer = 0f;
+        private bool _hasSlideBoost = false;
 
 
         private void HandleSliding(ref Vector3 currentVelocity, float deltaTime)
@@ -1175,61 +1525,45 @@ namespace KinematicCharacterController.Examples
 
             Vector3 downhillDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
 
-            // Blend stored direction and downhill
             Vector3 slideDir = Vector3.Lerp(_slideDirection, downhillDirection, 0.3f).normalized;
 
-            // Check if moving downhill or uphill
             float slopeDot = Vector3.Dot(slideDir, downhillDirection);
+
+            // Update boost timer
+            if (_hasSlideBoost)
+            {
+                _slideMomentumBoostTimer += deltaTime;
+
+                // Maintain minimum threshold speed during boost period
+                if (_slideMomentumBoostTimer < slideMomentumBoostDuration)
+                {
+                    float currentHorizontalSpeed = new Vector3(currentVelocity.x, 0f, currentVelocity.z).magnitude;
+                    if (currentHorizontalSpeed < slideMinMomentumThreshold)
+                    {
+                        // Maintain threshold speed during boost period
+                        Vector3 horizontalDir = new Vector3(slideDir.x, 0f, slideDir.z).normalized;
+                        currentVelocity = new Vector3(horizontalDir.x * slideMinMomentumThreshold, currentVelocity.y, horizontalDir.z * slideMinMomentumThreshold);
+                    }
+                }
+                else
+                {
+                    _hasSlideBoost = false; // Boost period ended
+                }
+            }
 
             // Apply slope acceleration only downhill
             float slideAcceleration = 9.81f * Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * slideGravityMultiplier;
             currentVelocity += slideDir * slideAcceleration * deltaTime * Mathf.Max(slopeDot, 0f);
 
-            // Apply friction
+            // Apply friction (reduced during boost period)
             float frictionMultiplier = 1f;
             if (slopeAngle <= minSlideAngle) frictionMultiplier = flatFrictionMultiplier;
-            if (slopeDot < 0f) frictionMultiplier *= 2f; // optional: uphill friction boost
-            currentVelocity *= 1f - (slideFriction * frictionMultiplier * deltaTime);
+            if (slopeDot < 0f) frictionMultiplier *= 2f;
 
-            // Clamp max speed
-            if (currentVelocity.magnitude > maxSlideSpeed)
-                currentVelocity = currentVelocity.normalized * maxSlideSpeed;
-
-            // Store direction for next frame
-            _slideDirection = currentVelocity.normalized;
-        }
-
-        private void HandleSlidingOld(ref Vector3 currentVelocity, float deltaTime)
-        {
-            Vector3 groundNormal = Motor.GroundingStatus.GroundNormal;
-            float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
-
-            // If too flat, slow down and exit
-            if (slopeAngle < minSlideAngle)
+            // Reduce friction during boost period to help maintain speed
+            if (_hasSlideBoost && _slideMomentumBoostTimer < slideMomentumBoostDuration)
             {
-                //  old
-                // currentVelocity = Vector3.MoveTowards(currentVelocity, Vector3.zero, slideFriction * deltaTime);
-                // return;
-            }
-
-            // Calculate slope’s downhill direction
-            Vector3 downhillDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
-
-            // Blend between stored direction and actual downhill
-            // The 0.3f factor controls how much gravity influences direction over time
-            Vector3 slideDir = Vector3.Lerp(_slideDirection, downhillDirection, 0.3f).normalized;
-
-            // Accelerate along slope
-            float slideAcceleration = 9.81f * Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * slideGravityMultiplier;
-            currentVelocity += slideDir * slideAcceleration * deltaTime;
-
-            Debug.LogError(slopeAngle);
-            // Apply friction
-            float frictionMultiplier = 1f;
-            if (slopeAngle <= minSlideAngle)
-            {
-                Debug.LogError("flat");
-                frictionMultiplier = flatFrictionMultiplier; // boost friction on flat
+                frictionMultiplier *= 0.3f;
             }
 
             currentVelocity *= 1f - (slideFriction * frictionMultiplier * deltaTime);
@@ -1240,88 +1574,238 @@ namespace KinematicCharacterController.Examples
 
             // Update stored direction for next frame (so we gradually re-align)
             _slideDirection = currentVelocity.normalized;
+            _slideSpeed = currentVelocity.magnitude;
         }
 
-
-        // make the boost happen when starting slide with _sprintPressed?
         private void StartSlide()
         {
             CurrentCharacterState = CharacterState.Sliding;
 
-            // Store the current velocity direction & speed
             Vector3 currentVelocity = Motor.BaseVelocity;
-            _slideSpeed = currentVelocity.magnitude;
+            float currentHorizontalSpeed = new Vector3(currentVelocity.x, 0f, currentVelocity.z).magnitude;
 
-            if (_slideSpeed > 0.1f)
+            if (currentHorizontalSpeed > 0.1f)
                 _slideDirection = currentVelocity.normalized;
             else
-                _slideDirection = Motor.CharacterForward; // fallback if starting from rest
+                _slideDirection = Motor.CharacterForward;
 
-            // Optional: apply small forward boost to make it feel snappy
-            _slideSpeed += slideInitialBoost;
+            // MOMENTUM BOOST: If speed is below threshold, boost to threshold
+            if (currentHorizontalSpeed < slideMinMomentumThreshold)
+            {
+                _hasSlideBoost = true;
+                _slideMomentumBoostTimer = 0f;
 
-            // Adjust collider for crouch/slide
-            //Motor.SetCapsuleDimensions(slideCapsuleRadius, slideCapsuleHeight, slideCapsuleYOffset);
+                // Apply immediate velocity boost to horizontal components only
+                Vector3 horizontalDir = new Vector3(_slideDirection.x, 0f, _slideDirection.z).normalized;
+                float boostAmount = slideMinMomentumThreshold - currentHorizontalSpeed;
+                _internalVelocityAdd = horizontalDir * boostAmount;
+            }
+            else
+            {
+                // No boost needed
+                _hasSlideBoost = false;
+            }
+
+            _slideSpeed = currentHorizontalSpeed;
         }
 
         private void StopSlide()
         {
             CurrentCharacterState = CharacterState.Default;
 
-            // retain some momentup
-           //  Motor.BaseVelocity = _slideDirection * Mathf.Max(_slideSpeed * 0.5f, 0f);
+            // Don't add extra momentum when exiting slide - just keep what we have
+            _hasSlideBoost = false;
         }
 
-
-        // v1 
-        /*
-        void HandleClimbVelocity(ref Vector3 currentVelocity, float deltaTime)
+        /// <summary>
+        /// Initiates wall running state
+        /// </summary>
+        private void StartWallRun(Vector3 wallNormal, bool isLeftWall)
         {
-            // Always apply gravity, so you still "hang"
-            currentVelocity += Gravity * deltaTime;
+            TransitionToState(CharacterState.WallRunning);
+            _wallRunNormal = wallNormal;
+            _isWallRunning = true;
+            _isWallRunningLeft = isLeftWall;
+            _jumpConsumed = false;
+            Motor.ForceUnground();
+        }
 
-            // Compute spring pull to anchor
-            Vector3 toAnchor = leftHandGrabAnchor - Motor.TransientPosition;
-            float dist = toAnchor.magnitude;
-            if (dist > idealRadius)
+        /// <summary>
+        /// Handles wall running physics - PRESERVES MOMENTUM, INDEPENDENT OF CAMERA
+        /// </summary>
+        private void HandleWallRunning(ref Vector3 currentVelocity, float deltaTime)
+        {
+            _wallRunTimer += deltaTime;
+
+            // Check if still against wall
+            if (!DetectWallForRunning(out Vector3 currentWallNormal, out bool isLeftWall))
             {
-                Vector3 dir = toAnchor.normalized;
-                float stretch = dist - idealRadius;
-
-                // Hooke's law spring force
-                Vector3 springForce = dir * (stretch * springStrength);
-
-                // Damping along spring axis
-                Vector3 velAlongDir = Vector3.Dot(currentVelocity, dir) * dir;
-                Vector3 dampingForce = -velAlongDir * springDamping;
-
-                // Apply
-                currentVelocity += (springForce + dampingForce) * deltaTime;
+                TransitionToState(CharacterState.Default);
+                return;
             }
 
+            // Check duration limit
+            if (_wallRunTimer >= WallRunMaxDuration)
+            {
+                TransitionToState(CharacterState.Default);
+                return;
+            }
+
+            // Check if player has released forward input - exit wall run if no forward input
+            Vector3 cameraPlanarDirection = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp).normalized;
+            Quaternion cameraPlanarRotation = Quaternion.LookRotation(cameraPlanarDirection, Motor.CharacterUp);
+            Vector3 rawMoveInput = _moveInputVector; // This is already set in SetInputs
+
+            // Exit wall run if player is not holding forward
+            if (rawMoveInput.sqrMagnitude < 0.1f)
+            {
+                TransitionToState(CharacterState.Default);
+                return;
+            }
+
+            // Update wall normal and side (wall may curve)
+            _wallRunNormal = currentWallNormal;
+            _isWallRunningLeft = isLeftWall;
+
+            // Calculate wall run direction (forward along wall) - INDEPENDENT of camera rotation
+            Vector3 wallForward = Vector3.Cross(_wallRunNormal, Motor.CharacterUp).normalized;
+
+            // Keep running in the same direction as when we started (or current velocity direction)
+            Vector3 currentHorizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+            if (currentHorizontalVelocity.magnitude > 0.1f)
+            {
+                // Use current velocity direction to determine which way along wall to run
+                if (Vector3.Dot(wallForward, currentHorizontalVelocity.normalized) < 0f)
+                {
+                    wallForward = -wallForward;
+                }
+            }
+            else
+            {
+                // Fallback: use character forward
+                if (Vector3.Dot(wallForward, Motor.CharacterForward) < 0f)
+                {
+                    wallForward = -wallForward;
+                }
+            }
+
+            // Update stored wall run direction
+            _wallRunDirection = wallForward;
+
+            // PRESERVE MOMENTUM: Get current speed along wall
+            float currentSpeedAlongWall = Vector3.Dot(currentHorizontalVelocity, wallForward);
+
+            // Use the maximum of current speed or base wall run speed
+            float targetSpeed = Mathf.Max(Mathf.Abs(currentSpeedAlongWall), WallRunSpeed);
+
+            // Apply slight decay over time (set WallRunSpeedDecay to 1.0 for no decay)
+            targetSpeed *= Mathf.Pow(WallRunSpeedDecay, deltaTime);
+
+            Vector3 targetVelocity = wallForward * targetSpeed;
+
+            // Allow some vertical input control
             if (_moveInputVector.sqrMagnitude > 0f)
             {
-                // Map input to world axes instead of wall tangent
-                Vector3 inputMove = new Vector3(_moveInputVector.x, 0f, _moveInputVector.y) * climbMoveSpeed;
-
-                // Optionally, rotate input by camera orientation so WASD matches view direction
-                inputMove = playerCamera.transform.TransformDirection(inputMove);
-
-                currentVelocity += inputMove * deltaTime;
+                Vector3 verticalInput = Vector3.Project(_moveInputVector, Motor.CharacterUp);
+                targetVelocity += verticalInput * WallRunSpeed * 0.5f;
             }
 
+            // Smooth transition to target velocity (less aggressive to preserve momentum better)
+            currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, 1f - Mathf.Exp(-5f * deltaTime));
+
+            // Reduced gravity while wall running
+            currentVelocity += playerCharacter.CurrentStats.gravity * WallRunGravityMultiplier * deltaTime;
+
+            // Apply slight pull toward wall to maintain contact
+            currentVelocity += -_wallRunNormal * 2f * deltaTime;
         }
-        */
+
 
         [Header("Climbing Physics")]
-        public float maxRopeLength = 2.5f; // Maximum distance from anchor
-        public float restLength = 1.5f; // Natural/rest length of the elastic joint
-        public float elasticStiffness = 50f; // How stiff the elastic is (spring constant)
-        public float radialDamping = 10f; // Damping along radial direction (toward/away from anchor)
-        public float tangentialDamping = 15f; // Damping perpendicular to radial direction (prevents swinging)
-        public float maxElasticForce = 100f; // Maximum force the elastic can apply
+        public float maxRopeLength = 2.5f;
+        public float restLength = 1.5f;
+        public float elasticStiffness = 50f;
+        public float radialDamping = 10f;
+        public float tangentialDamping = 15f;
+        public float maxElasticForce = 100f;
 
-        void HandleClimbVelocityElastic(ref Vector3 currentVelocity, float deltaTime)
+        void HandleClimbVelocityogVERSION(ref Vector3 currentVelocity, float deltaTime)
+        {
+            Vector3 input = _moveInputVector;
+            if (input.sqrMagnitude > 1f) input.Normalize();
+
+            Vector3 inputMove = input;
+            inputMove *= climbMoveSpeed * ((isGrabbingL && isGrabbingR) ? 1.25f : 1f);
+
+            currentVelocity += inputMove;
+
+            float outerRadius = 2.5f;
+
+            if (isGrabbingL)
+            {
+                Vector3 toAnchorLeft = Motor.TransientPosition - leftHandGrabAnchor;
+                float distLeft = toAnchorLeft.magnitude;
+
+                if (distLeft > outerRadius)
+                {
+                    Vector3 dir = toAnchorLeft.normalized;
+                    float overshootSpeed = Vector3.Dot(currentVelocity, dir);
+                    if (overshootSpeed > 0f)
+                    {
+                        currentVelocity -= dir * overshootSpeed * 1.3f;
+                        currentVelocity *= (1f / (1f + (2f * 2f * deltaTime)));
+                    }
+                }
+            }
+
+            if (isGrabbingR)
+            {
+                Vector3 toAnchorRight = Motor.TransientPosition - rightHandGrabAnchor;
+                float distRight = toAnchorRight.magnitude;
+
+                if (distRight > outerRadius)
+                {
+                    Vector3 dir = toAnchorRight.normalized;
+
+                    float overshootSpeed = Vector3.Dot(currentVelocity, dir);
+                    if (overshootSpeed > 0f)
+                    {
+                        currentVelocity -= dir * overshootSpeed * 1.3f;
+                        currentVelocity *= (1f / (1f + (2f * 2f * deltaTime)));
+                    }
+                }
+            }
+
+            if (input.sqrMagnitude > 0f)
+            {
+                _hasMovedWhileClimbing = true;
+            }
+            currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
+
+
+            if (_hasMovedWhileClimbing && input.sqrMagnitude == 0f)
+            {
+                float maxFallSpeed = -0.5f;
+                if (currentVelocity.y < maxFallSpeed)
+                {
+                    currentVelocity.y = maxFallSpeed;
+                }
+            }
+
+            float dragMultiplier = 2f;
+            currentVelocity *= (1f / (1f + (Drag * dragMultiplier * deltaTime)));
+
+            if (_internalVelocityAdd.sqrMagnitude > 0f)
+            {
+                currentVelocity += _internalVelocityAdd;
+                _internalVelocityAdd = Vector3.zero;
+            }
+        }
+
+        /// SORT THIS OUT FUCKIN MESS SECTION
+        /// 
+
+        void HandleClimbVelocity(ref Vector3 currentVelocity, float deltaTime)
         {
             // ----------------------
             // Camera-relative input movement
@@ -1482,14 +1966,14 @@ namespace KinematicCharacterController.Examples
             }
         }
 
-        void HandleClimbVelocityWorkinonit(ref Vector3 currentVelocity, float deltaTime)
+        void HandleClimbVelocityuhhotherversion(ref Vector3 currentVelocity, float deltaTime)
         {
 
             // ----------------------
             // 2. Free WSAD movement (camera-relative)
             // ----------------------
             Vector3 input = _moveInputVector;
-           if (input.sqrMagnitude > 1f) input.Normalize();
+            if (input.sqrMagnitude > 1f) input.Normalize();
 
             Vector3 inputMove = input;
             inputMove *= climbMoveSpeed * ((isGrabbingL && isGrabbingR) ? 1.25f : 1f);
@@ -1580,7 +2064,8 @@ namespace KinematicCharacterController.Examples
                     currentVelocity = new Vector3(currentVelocity.x, verticalVelocity.y, currentVelocity.z);
                 }
                 */
-            } else
+            }
+            else
             {
                 currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
             }
@@ -1602,7 +2087,8 @@ namespace KinematicCharacterController.Examples
             if (input.sqrMagnitude > 0f)
             {
                 dragMultiplier = 2f;
-            } else
+            }
+            else
             {
                 dragMultiplier = 20f;
             }
@@ -1620,203 +2106,11 @@ namespace KinematicCharacterController.Examples
         }
 
 
-        void HandleClimbVelocity(ref Vector3 currentVelocity, float deltaTime)
-        {
-
-            // ----------------------
-            // 2. Free WSAD movement (camera-relative)
-            // ----------------------
-            Vector3 input = _moveInputVector;
-            if (input.sqrMagnitude > 1f) input.Normalize();
-
-            Vector3 inputMove = input;
-            inputMove *= climbMoveSpeed * ((isGrabbingL && isGrabbingR) ? 1.25f : 1f);
-
-            Debug.Log(inputMove);
-
-            currentVelocity += inputMove; // DO NOT multiply by deltaTime
-
-            float outerRadius = 2.5f; // maximum allowed distance
-
-            if (isGrabbingL)
-            {
-                Vector3 toAnchorLeft = Motor.TransientPosition - leftHandGrabAnchor;
-                float distLeft = toAnchorLeft.magnitude;
 
 
 
-                if (distLeft > outerRadius)
-                {
-                    Vector3 dir = toAnchorLeft.normalized;
+        /// END OF SORT THIS OUT FUCKIN MESS SECTION
 
-                    /*
-                    // 1️⃣ Clamp position at the boundary
-                    Vector3 targetPos = leftHandGrabAnchor + dir * outerRadius;
-                    currentVelocity += (targetPos - Motor.TransientPosition);
-
-                    // 2️⃣ Kill any velocity along that direction (heavy damping)
-                    Vector3 alongDir = Vector3.Project(currentVelocity, dir);
-                    currentVelocity -= alongDir;
-                    */
-
-                    // 3️⃣ Optional: add extra force opposite to overshoot if still moving out
-                    float overshootSpeed = Vector3.Dot(currentVelocity, dir);
-                    if (overshootSpeed > 0f)
-                    {
-                        currentVelocity -= dir * overshootSpeed * 1.3f; // multiplier can be tuned
-                        // add aditional drag
-                        currentVelocity *= (1f / (1f + (2f * 2f * deltaTime)));
-                    }
-                }
-            }
-
-            if (isGrabbingR)
-            {
-                Vector3 toAnchorRight = Motor.TransientPosition - rightHandGrabAnchor;
-                float distRight = toAnchorRight.magnitude;
-
-
-                if (distRight > outerRadius)
-                {
-                    Vector3 dir = toAnchorRight.normalized;
-
-                    float overshootSpeed = Vector3.Dot(currentVelocity, dir);
-                    if (overshootSpeed > 0f)
-                    {
-                        currentVelocity -= dir * overshootSpeed * 1.3f; // multiplier can be tuned
-
-                        // add aditional drag
-                        currentVelocity *= (1f / (1f + (2f * 2f * deltaTime)));
-                    }
-                }
-            }
-
-
-
-            // MAKE THIS WORK VERTICALLY TOO
-            // Cap climbing velocity when moving with input
-            float maxClimbSpeed = climbMoveSpeed * 4f; // Adjust multiplier as needed
-            if (input.sqrMagnitude > 0f)
-            {
-                _hasMovedWhileClimbing = true;
-            }
-            currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
-
-
-            if (_hasMovedWhileClimbing && input.sqrMagnitude == 0f)
-            {
-                // ADD IF INPUT HAS BEEN PRESSED AND RESET THE FLAG
-                // Limit fall speed after input movement
-                float maxFallSpeed = -0.5f; // Negative value for downward velocity
-                if (currentVelocity.y < maxFallSpeed)
-                {
-                    currentVelocity.y = maxFallSpeed;
-                }
-            }
-
-
-            float dragMultiplier = 2f;
-
-            // Drag was zero in the previous version
-            currentVelocity *= (1f / (1f + (Drag * dragMultiplier * deltaTime)));
-
-
-            // Take into account additive velocity
-            if (_internalVelocityAdd.sqrMagnitude > 0f)
-            {
-                currentVelocity += _internalVelocityAdd;
-                _internalVelocityAdd = Vector3.zero;
-            }
-        }
-
-
-        void HandleClimbVelocity1(ref Vector3 currentVelocity, float deltaTime)
-        {
-            // Apply gravity
-            currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
-
-            // Camera-relative input
-            // if (_moveInputVector.sqrMagnitude > 0f)
-            //{
-            /*
-                Debug.Log(_moveInputVector);
-                Motor.ForceUnground();
-            Vector3 inputMove = _moveInputVector * climbMoveSpeed;
-
-            inputMove = playerCamera.transform.TransformDirection(inputMove);
-
-            currentVelocity += inputMove; // * deltaTime; // DO NOT multiply by deltaTime
-            */
-
-            // Normalize input to prevent diagonal boost
-            Motor.ForceUnground();
-            Vector3 input = _moveInputVector;
-            if (input.sqrMagnitude > 1f) input.Normalize();
-
-            // Map x/z input to camera right/forward (use forward vector fully, including Y)
-            Vector3 inputMove = playerCamera.transform.forward * input.z + playerCamera.transform.right * input.x;
-
-            // Scale by speed
-            inputMove *= climbMoveSpeed;
-
-            // Add directly to KCC velocity
-            currentVelocity += inputMove; // NO deltaTime
-
-            // }
-
-            // Apply spring if outside ideal radius
-            Vector3 toAnchor = leftHandGrabAnchor - Motor.TransientPosition;
-            float dist = toAnchor.magnitude;
-
-            // og
-            /*
-            if (dist > idealRadius)
-            {
-                Vector3 dir = toAnchor.normalized;
-                float stretch = dist - idealRadius;
-                Vector3 springForce = dir * stretch * springStrength;
-                Vector3 dampingForce = -Vector3.Project(currentVelocity, dir) * springDamping;
-                currentVelocity += (springForce + dampingForce) * deltaTime;
-            }
-            */
-
-            // Only apply spring if outside dead zone
-            float deadZone = 1.5f;
-            if (dist > idealRadius + deadZone)
-            {
-                Vector3 dir = toAnchor.normalized;
-                float stretch = dist - (idealRadius + deadZone);
-
-                // Gentle spring
-                //float springStrength = 10f;
-                Vector3 springForce = dir * stretch * springStrength;
-
-                // Strong damping to stop swing
-                //float springDamping = 20f;
-                Vector3 dampingForce = -Vector3.Project(currentVelocity, dir) * springDamping;
-
-                currentVelocity += (springForce + dampingForce) * deltaTime;
-            }
-
-
-
-
-            /*
-             float overDistance = dist - idealRadius;
-
-            float maxOverStretch = 2.5f;
-            if (overDistance > 0f)
-            {
-                float t = Mathf.Clamp01(overDistance / maxOverStretch); // maxOverStretch defines how far before full force
-                Vector3 dir = toAnchor.normalized;
-                Vector3 springForce = dir * t * overDistance * springStrength;
-                Vector3 dampingForce = -Vector3.Project(currentVelocity, dir) * springDamping * t;
-
-                currentVelocity += (springForce + dampingForce) * deltaTime;
-            }
-            */
-
-        }
 
 
 
@@ -1904,7 +2198,7 @@ namespace KinematicCharacterController.Examples
                             }
                         }
 
-                        if (!_isCrouching) //|| !Motor.GroundingStatus.IsStableOnGround)
+                        if (!_isCrouching)
                         {
                             StopSlide();
                         }
@@ -1973,6 +2267,10 @@ namespace KinematicCharacterController.Examples
 
         protected void OnLanded()
         {
+            // MOMENTUM PRESERVATION ON LANDING
+            Vector3 horizontalVelocity = new Vector3(_velocityBeforeLanding.x, 0f, _velocityBeforeLanding.z);
+            float landingSpeed = horizontalVelocity.magnitude;
+
             // Check if player should bounce on landing
             if (EnableBounce && _jumpHeld && !Motor.LastGroundingStatus.IsStableOnGround)
             {
@@ -2010,7 +2308,12 @@ namespace KinematicCharacterController.Examples
             }
             else
             {
-                // Normal landing - restore air acceleration
+                // MOMENTUM LANDING: Preserve horizontal speed for flow
+                if (landingSpeed > sprintSpeed)
+                {
+                    _internalVelocityAdd = horizontalVelocity * speedRetentionOnLanding;
+                }
+
                 _isBouncing = false;
             }
         }

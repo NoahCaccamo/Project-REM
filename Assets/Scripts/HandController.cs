@@ -18,7 +18,7 @@ public class HandController : MonoBehaviour
 
     [Header("Hand Visual")]
     [SerializeField] private Transform handModelParent; // REDUNDANT, USE ANCHOR
-    [SerializeField] private GameObject currentHandModel;
+    [SerializeField] public GameObject currentHandModel;
 
     [Header("References")]
     [SerializeField] private DeliveryWaypoint deliveryWaypoint; // Reference to scene waypoint

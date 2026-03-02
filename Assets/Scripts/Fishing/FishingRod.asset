@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 592ad8a42d6a398429dbb05e6061ee40, type: 3}
+  m_Name: FishingRod
+  m_EditorClassIdentifier: Assembly-CSharp::FishingRodObject
+  prefab: {fileID: 2689347651003962251, guid: c7477b70dd3ddd247942025b982c1b38, type: 3}
+  altPrefab: {fileID: 2689347651003962251, guid: c8f293703d807804ba46d3cc7a19b0be,
+    type: 3}
+  heldModel: {fileID: 2689347651003962251, guid: 3cc160b0cbecd9a47b6a02a36e81d852,
+    type: 3}
+  bagPrefabPhysics: {fileID: 0}
+  bagPrefabVisual: {fileID: 0}
+  type: 3
+  description: 
+  spdBonus: 0
+  defBonus: 0
+  throwForce: 25
+  recoilForce: 8
+  maxCastDistance: 15
+  castSpeed: 8
+  bobberCastSpeed: 20
+  reelSpeed: 5
+  reticlePrefab: {fileID: 889329227055701933, guid: 481ba8fee3a559b46903f1f536cadbc4,
+    type: 3}
+  bobberPrefab: {fileID: 889329227055701933, guid: 481ba8fee3a559b46903f1f536cadbc4,
+    type: 3}
+  rodLinePrefab: {fileID: 9054700084817771448, guid: eb2867d043678f646a735c61c076d9f0,
+    type: 3}

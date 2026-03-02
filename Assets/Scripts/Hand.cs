@@ -29,13 +29,11 @@ public class Hand
             controller.ShowItem(heldItem);
         }
 
-        /*
         if (heldItem.prefab != null)
         {
             // change this to be a sprite in the object which is the hand holding said object
             // so if we have a sprite, change the hand's sprite to that in the controller
         }
-        */
         ItemObject item = pickup.ItemData;
 
         // is this necessary for anything?
