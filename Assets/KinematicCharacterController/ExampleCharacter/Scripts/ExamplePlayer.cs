@@ -46,8 +46,31 @@ namespace KinematicCharacterController.Examples
 
             if (Input.GetKeyDown(KeyCode.R))
             {
-                Character.Motor.SetPosition(new Vector3(26.4899998f, 430.589996f, 202.509995f));
+                if (GameObject.Find("Spawn") != null)
+                {
+                    Character.Motor.SetPosition(GameObject.Find("Spawn").transform.position);
+                } else
+                {
+                    Character.Motor.SetPosition(new Vector3(26.4899998f, 430.589996f, 202.509995f));
+                }
+
                 Character.DropPackage();
+            }
+
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                if (GameObject.Find("Fishpondspawn") != null)
+                {
+                    Character.Motor.SetPosition(GameObject.Find("Fishpondspawn").transform.position);
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                // Close the application if we're not in the editor
+                #if !UNITY_EDITOR
+                Application.Quit();
+                #endif
             }
 
             HandleCharacterInput();
@@ -114,14 +137,14 @@ namespace KinematicCharacterController.Examples
             characterInputs.CameraRotation = CharacterCamera.Transform.rotation;
             characterInputs.JumpDown = Input.GetKeyDown(KeyCode.Space);
             characterInputs.JumpHeld = Input.GetKey(KeyCode.Space);
-            characterInputs.CrouchDown = Input.GetKeyDown(KeyCode.C);
-            characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C);
+            characterInputs.CrouchDown = Input.GetKeyDown(KeyCode.C) || Input.GetMouseButtonDown(3);
+            characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C) || Input.GetMouseButtonUp(3);
             characterInputs.LeftHand = Input.GetMouseButton(0);
             characterInputs.RightHand = Input.GetMouseButton(1);
             characterInputs.LeftHandDown = Input.GetMouseButtonDown(0);
             characterInputs.RightHandDown = Input.GetMouseButtonDown(1);
 
-            characterInputs.SprintDown = Input.GetKey(KeyCode.LeftShift);
+            characterInputs.SprintDown = Input.GetKeyDown(KeyCode.LeftShift);
 
             // Apply inputs to character
             Character.SetInputs(ref characterInputs);
