@@ -555,12 +555,15 @@ public class BackpackTestSetup : MonoBehaviour
     void OnGUI()
     {
         GUILayout.BeginArea(new Rect(10, 10, 400, 320));
-        GUILayout.Label("=== Backpack Test Controls ===");
-        GUILayout.Label("T - Spawn Test Items IN Inventory");
-        GUILayout.Label("Y - Spawn World Item (for pickup)");
-        GUILayout.Label("H - Transfer Hand Item to Inventory");
-        GUILayout.Label("N - Spawn NavAgent");
+        GUILayout.Label("=== Prototype Controls ===");
+        GUILayout.Label("Left/Right Click - Use left/right hand");
+        GUILayout.Label("Space - Jump");
+        GUILayout.Label("Space (Hold) - Bounce upon landing");
+        GUILayout.Label("C OR Side Mouse Button Back - Crouch/Slide");
         GUILayout.Label("Tab - Toggle Backpack Open/Close");
+        GUILayout.Label("Shift - Run - I might just change this so you always run and dont need to press shift");
+        GUILayout.Label("R - Reset position to spawn");
+        /*
         GUILayout.Label("C - Clear All Items");
         GUILayout.Label("Q - Toggle Water Contact");
         GUILayout.Label("Arrow Keys - Apply Bump Force");
@@ -568,6 +571,7 @@ public class BackpackTestSetup : MonoBehaviour
         GUILayout.Label("Click & Hold - Drag Items");
         GUILayout.Label("Quick Click - Pickup Item from Inventory");
         GUILayout.Label("Left Click (on world item) - Pickup to Hand");
+        */
 
         GUILayout.Label(""); // Spacer
 
