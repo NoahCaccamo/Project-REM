@@ -19,11 +19,11 @@ TagManager:
   - Player
   - Climbable
   - Interactable
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Item
+  - Backpack
+  - BackpackPhysics
+  - BackpackVisuals
+  - Fish
   - 
   - 
   - 

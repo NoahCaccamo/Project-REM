@@ -17,6 +17,9 @@ public abstract class ItemObject : ScriptableObject
     public GameObject altPrefab;
 
     public GameObject heldModel;
+
+    public GameObject bagPrefabPhysics;
+    public GameObject bagPrefabVisual;
     public ItemType type;
     [TextArea(15, 20)]
     public string description;
