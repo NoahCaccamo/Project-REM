@@ -1,5 +1,42 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7398157839220891481
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc659104722eeeb489b1d83990813e53, type: 3}
+  m_Name: DitherVol
+  m_EditorClassIdentifier: Masking.Runtime::VolFx.DitherVol
+  active: 1
+  m_Impact:
+    m_OverrideState: 1
+    m_Value: 0.383
+  m_Power:
+    m_OverrideState: 1
+    m_Value: 0.702
+  m_Scale:
+    m_OverrideState: 1
+    m_Value: 0
+  m_Pixelate:
+    m_OverrideState: 1
+    m_Value: 1
+  m_Fps:
+    m_OverrideState: 1
+    m_Value: 0
+  m_Palette:
+    m_OverrideState: 1
+    m_Value: {fileID: 2800000, guid: 1302236c3fe5c7e409408559c69e56f1, type: 3}
+  m_Pattern:
+    m_OverrideState: 1
+    m_Value: {fileID: 0}
+  m_Mode:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &-4439139095157228490
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -78,6 +115,44 @@ MonoBehaviour:
   balance:
     m_OverrideState: 1
     m_Value: 0
+--- !u!114 &-3624864506958783400
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4100329e4588497eb2079d472550f955, type: 3}
+  m_Name: AutoExposure
+  m_EditorClassIdentifier: Assembly-CSharp::Lepsima.Shaders.AutoExposure.AutoExposure
+  active: 1
+  <displayName>k__BackingField: 
+  framesPerCompute:
+    <fieldHash>k__BackingField: 1442470488
+    m_OverrideState: 1
+    m_Value: 5
+  brightnessLimit:
+    <fieldHash>k__BackingField: 1681820880
+    m_OverrideState: 1
+    m_Value: 15
+  whitePoint:
+    <fieldHash>k__BackingField: 1921171272
+    m_OverrideState: 1
+    m_Value: 3
+  exposureRange:
+    <fieldHash>k__BackingField: -2134445632
+    m_OverrideState: 1
+    m_Value: {x: -2.5, y: 0.6}
+  increaseSpeed:
+    <fieldHash>k__BackingField: -1895095240
+    m_OverrideState: 1
+    m_Value: 5
+  decreaseSpeed:
+    <fieldHash>k__BackingField: -1655744848
+    m_OverrideState: 1
+    m_Value: 5
 --- !u!114 &-3484102481148516906
 MonoBehaviour:
   m_ObjectHideFlags: 3

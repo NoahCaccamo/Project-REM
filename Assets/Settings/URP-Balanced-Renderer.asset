@@ -14,6 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   blitMaterial: {fileID: 2100000, guid: 4a5832e1b9e521e4b9aa0d33324bb745, type: 2}
+--- !u!114 &-6098934054830614871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: FullScreenPassRendererFeature
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 0
+  injectionPoint: 600
+  fetchColorBuffer: 1
+  requirements: 0
+  passMaterial: {fileID: 2100000, guid: 3be8a1883212a3342bfc2978c33d3520, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &-5403867442158247978
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -66,15 +86,22 @@ MonoBehaviour:
     BlurQuality: 0
     Falloff: 100
     SampleCount: -1
-  m_BlueNoise256Textures:
-  - {fileID: 2800000, guid: 36f118343fc974119bee3d09e2111500, type: 3}
-  - {fileID: 2800000, guid: 4b7b083e6b6734e8bb2838b0b50a0bc8, type: 3}
-  - {fileID: 2800000, guid: c06cc21c692f94f5fb5206247191eeee, type: 3}
-  - {fileID: 2800000, guid: cb76dd40fa7654f9587f6a344f125c9a, type: 3}
-  - {fileID: 2800000, guid: e32226222ff144b24bf3a5a451de54bc, type: 3}
-  - {fileID: 2800000, guid: 3302065f671a8450b82c9ddf07426f3a, type: 3}
-  - {fileID: 2800000, guid: 56a77a3e8d64f47b6afe9e3c95cb57d5, type: 3}
-  m_Shader: {fileID: 4800000, guid: 0849e84e3d62649e8882e9d6f056a017, type: 3}
+--- !u!114 &-1367781245175091612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eca2e8d1c8fb13a4abc7116bfb2ef274, type: 3}
+  m_Name: DitherFx
+  m_EditorClassIdentifier: Masking.Runtime::VolFx.DitherFx
+  m_Active: 1
+  _event: 600
+  _pass: {fileID: 8345803238337923410}
+  _blitShader: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
 --- !u!114 &-430671018667195724
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -88,6 +115,26 @@ MonoBehaviour:
   m_Name: RecordTexturesFeature
   m_EditorClassIdentifier: 
   m_Active: 1
+--- !u!114 &-16818367430902072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: FullScreenPassRendererFeature
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 0
+  injectionPoint: 600
+  fetchColorBuffer: 1
+  requirements: 0
+  passMaterial: {fileID: 2100000, guid: b1acaf4906cbfeb4590192d328d6d61f, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,11 +166,16 @@ MonoBehaviour:
   - {fileID: -5028232494450654261}
   - {fileID: -6494813318983210367}
   - {fileID: 2295903488961422203}
-  m_RendererFeatureMap: adc0de57c6d2eee5cb4331e02f2138ba81aa8787b2c9dda57b23201a0fb0dc1f
+  - {fileID: -16818367430902072}
+  - {fileID: -6098934054830614871}
+  m_RendererFeatureMap: adc0de57c6d2eee5cb4331e02f2138ba81aa8787b2c9dda57b23201a0fb0dc1fc83e94afc83fc4ffa9d64969ca3b5cab
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
-  m_AssetVersion: 2
+  m_AssetVersion: 3
+  m_PrepassLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   m_OpaqueLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -171,7 +223,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
   m_Name: DatamoshPass
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   injectionPoint: 600
   fetchColorBuffer: 1
   requirements: -1
@@ -179,3 +231,34 @@ MonoBehaviour:
   passIndex: 0
   bindDepthStencilAttachment: 1
   m_Version: 1
+--- !u!114 &8345803238337923410
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 704e9f69207ce0e44a2be12086db83b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Masking.Runtime::VolFx.DitherPass
+  _active: 1
+  _shader: {fileID: 4800000, guid: 0e83aac3b775ca94b92d8aaafbad155e, type: 3}
+  _material: {fileID: 0}
+  _isActive: 1
+  _noiseScale: 0.304
+  _scaleRange: {x: 1, y: 100}
+  _palette: {fileID: 2800000, guid: a8483ac02bdf95c4a8aac4babc21b65b, type: 3}
+  _pattern: {fileID: 2800000, guid: b7973047285d6dc48a217fb32b7a8ebe, type: 3}
+  _noiseMode: 0
+  _pixelate: 1
+  _scale: 0.627
+  _frameRate: 0
+  _lutSize: 0
+  _gamma: 0
+  _frame: 0
+  _noiseTex: {fileID: 0}
+  _ditherMad: {x: 135.15642, y: 63.072998, z: 0, w: 0}
+  _noiseModePrev: 0
+  _lutSizePrev: 0

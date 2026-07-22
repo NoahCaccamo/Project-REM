@@ -1,7 +1,9 @@
 using KinematicCharacterController;
 using KinematicCharacterController.Examples;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static UnityEngine.Rendering.ReloadAttribute;
 
 public class PlayerCharacter : MonoBehaviour
@@ -29,6 +31,33 @@ public class PlayerCharacter : MonoBehaviour
     {
         DontDestroyOnLoad(this.gameObject);
         CurrentStats = new CharacterStats(BaseStats);
+        // TEMP LOAD SCENE FOR BUILD
+        StartCoroutine(LoadSceneAdditive("Mountain"));
+
+    }
+
+    private IEnumerator LoadSceneAdditive(string sceneName)
+    {
+        // Check if scene is already loaded
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+        if (scene.isLoaded)
+        {
+            Debug.Log($"Scene {sceneName} is already loaded.");
+            yield break;
+        }
+
+        // Load scene additively
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+
+        // Wait until the scene is fully loaded
+        while (!asyncLoad.isDone)
+        {
+            // Optional: You can track progress here
+            // Debug.Log($"Loading progress: {asyncLoad.progress * 100}%");
+            yield return null;
+        }
+
+        Debug.Log($"Scene {sceneName} loaded additively.");
     }
 
     public void AcceptPackage(MemoryType package)
