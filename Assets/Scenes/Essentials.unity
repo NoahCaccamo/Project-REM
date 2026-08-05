@@ -6800,12 +6800,21 @@ MonoBehaviour:
   DashCooldown: 0.3
   MaxAirDashes: 1
   DashDuration: 0.15
-  PreserveMomentumAfterDash: 0
-  PowerRequiredPerDash: 3
-  _currentPower: 0
+  PreserveMomentumAfterDash: 1
+  MaxMomentumTank: 30
+  MomentumTankDecayRate: 20
+  MomentumTankGraceWindow: 1.5
+  _momentumTank: 0
+  DashSlideMomentumTransfer: 1
+  DashAirMomentumTransfer: 1
   MinBounceSpeedForPower: 12
   MaxBounceSpeedForPower: 25
+  BounceMomentumMultiplier: 1
   ShowPowerFeedback: 1
+  OnlyGainMomentumFromBigLoss: 0
+  BigMomentumLossWindow: 0.25
+  BigMomentumLossThreshold: 15
+  MinSpeedThresholdForMomentumLoss: 10
   AllowJumpingWhenSliding: 1
   JumpUpSpeed: 13
   JumpScalableForwardSpeed: 0
@@ -6872,8 +6881,8 @@ MonoBehaviour:
   slideInitialBoost: 6
   slideGravityMultiplier: 20
   slideFriction: 2
-  maxSlideSpeed: 22
-  minSlideAngle: 10
+  maxSlideSpeed: 50
+  minSlideAngle: 0
   flatFrictionMultiplier: 1
   slideSteeringSpeed: 5
   slideSteeringSharpness: 8

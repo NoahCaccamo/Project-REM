@@ -99,17 +99,39 @@ namespace KinematicCharacterController.Examples
         private float _dashEndTime = 0f;
         private Vector3 _dashDirection;
 
-        [Header("Dash Power System")]
-        [Tooltip("Power required to gain one dash charge")]
-        public int PowerRequiredPerDash = 3;
-        [Tooltip("Current power accumulated (0-PowerRequiredPerDash)")]
-        [SerializeField] private int _currentPower = 0;
-        [Tooltip("Minimum bounce speed to earn power")]
+        [Header("Momentum Tank")]
+        [Tooltip("Maximum momentum the tank can store")]
+        public float MaxMomentumTank = 30f;
+        [Tooltip("How fast the tank decays per second once the grace window has expired")]
+        public float MomentumTankDecayRate = 20f;
+        [Tooltip("How long after grabbing something (or a big momentum loss) before the tank starts rapidly decaying")]
+        public float MomentumTankGraceWindow = 1.5f;
+        [Tooltip("Current momentum stored in the tank")]
+        [SerializeField] private float _momentumTank = 0f;
+        [Tooltip("Percentage of the tank transferred into dash speed when dashing while sliding")]
+        [Range(0f, 1f)] public float DashSlideMomentumTransfer = 1f;
+        [Tooltip("Percentage of the tank transferred into dash speed when dashing while airborne/grounded (non-sliding)")]
+        [Range(0f, 1f)] public float DashAirMomentumTransfer = 0.8f;
+        [Tooltip("Minimum bounce speed considered for momentum feedback logging")]
         public float MinBounceSpeedForPower = 12f;
-        [Tooltip("Maximum bounce speed to earn power")]
+        [Tooltip("Maximum bounce speed considered for momentum feedback logging")]
         public float MaxBounceSpeedForPower = 25f;
-        [Tooltip("Visual feedback for power gain")]
+        [Tooltip("Multiplier applied to bounce speed when converting it into stored momentum")]
+        public float BounceMomentumMultiplier = 1f;
+        [Tooltip("Visual feedback for momentum/dash charge gain")]
         public bool ShowPowerFeedback = true;
+        private float _lastGrabTime = -999f;
+        private float _previousHorizontalSpeed = 0f;
+
+        [Header("Momentum Tank - Big Loss Detection")]
+        [Tooltip("EXPERIMENTAL: If true, the tank ONLY gains momentum from big losses detected within the short window, ignoring gradual/small frame-to-frame speed loss.")]
+        public bool OnlyGainMomentumFromBigLoss = true;
+        [Tooltip("Time window (seconds) within which a momentum drop is considered a 'big loss'")]
+        public float BigMomentumLossWindow = 0.25f;
+        [Tooltip("Minimum speed lost within the window to count as a big loss and reset the grace window")]
+        public float BigMomentumLossThreshold = 8f;
+        private float _windowStartTime = 0f;
+        private float _windowStartSpeed = 0f;
 
         [Header("Jumping")]
         public bool AllowJumpingWhenSliding = false;
@@ -250,7 +272,11 @@ namespace KinematicCharacterController.Examples
             _normalAirAcceleration = AirAccelerationSpeed;
 
             _airDashesRemaining = MaxAirDashes;
-            _currentPower = 0;
+            _momentumTank = 0f;
+            _lastGrabTime = Time.time;
+            _previousHorizontalSpeed = 0f;
+            _windowStartTime = Time.time;
+            _windowStartSpeed = 0f;
 
             SetupSpeedDisplay();
         }
@@ -287,6 +313,7 @@ namespace KinematicCharacterController.Examples
             UpdateSpeedDisplay();
             UpdateWallRunCooldown();
             UpdateMomentumGraceWindow();
+            UpdateMomentumTank();
         }
 
         private void LateUpdate()
@@ -303,27 +330,23 @@ namespace KinematicCharacterController.Examples
 
                 string colorTag = GetSpeedColorTag(currentSpeed);
 
-                string powerBar = GetPowerBar();
-                speedDisplay.text = $"{colorTag}{currentSpeed:F1}</color> m/s\n{powerBar}\nDashes: {_airDashesRemaining}/{MaxAirDashes}";
+                string momentumBar = GetMomentumBar();
+                speedDisplay.text = $"{colorTag}{currentSpeed:F1}</color> m/s\n{momentumBar}\nDashes: {_airDashesRemaining}/{MaxAirDashes}";
 
             }
         }
 
-        private string GetPowerBar()
+        private string GetMomentumBar()
         {
-            string bar = "Power: [";
-            for (int i = 0; i < PowerRequiredPerDash; i++)
+            float fillPercent = MaxMomentumTank > 0f ? Mathf.Clamp01(_momentumTank / MaxMomentumTank) : 0f;
+            int filledSegments = Mathf.RoundToInt(fillPercent * 10f);
+
+            string bar = "Momentum: [";
+            for (int i = 0; i < 10; i++)
             {
-                if (i < _currentPower)
-                {
-                    bar += "<color=#00FF00>●</color>"; // Filled
-                }
-                else
-                {
-                    bar += "<color=#808080>○</color>"; // Empty
-                }
+                bar += i < filledSegments ? "<color=#00FFFF>●</color>" : "<color=#808080>○</color>";
             }
-            bar += "]";
+            bar += $"] {_momentumTank:F1}/{MaxMomentumTank:F1}";
             return bar;
         }
 
@@ -347,6 +370,99 @@ namespace KinematicCharacterController.Examples
                     _storedHorizontalMomentum = Vector3.zero;
                 }
             }
+        }
+
+        private void UpdateMomentumTank()
+        {
+            float horizontalSpeed = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z).magnitude;
+
+            // Normal (non-experimental) behavior: fill the tank from any per-frame momentum loss
+            if (!OnlyGainMomentumFromBigLoss)
+            {
+                float speedLoss = _previousHorizontalSpeed - horizontalSpeed;
+                if (speedLoss > 0f)
+                {
+                    _momentumTank = Mathf.Min(_momentumTank + speedLoss, MaxMomentumTank);
+                }
+            }
+
+            // Detect a big chunk of momentum lost within a short window (e.g. slamming into a wall)
+            if (Time.time - _windowStartTime > BigMomentumLossWindow)
+            {
+                // Window expired, start a new one from the current speed
+                _windowStartTime = Time.time;
+                _windowStartSpeed = horizontalSpeed;
+            }
+            else
+            {
+                float windowSpeedLoss = _windowStartSpeed - horizontalSpeed;
+                if (windowSpeedLoss >= BigMomentumLossThreshold)
+                {
+                    // Reset the decay grace window, just like a grab would
+                    _lastGrabTime = Time.time;
+
+                    // EXPERIMENTAL: Only gain momentum here, exclusively from big losses
+                    if (OnlyGainMomentumFromBigLoss)
+                    {
+                        _momentumTank = Mathf.Min(_momentumTank + windowSpeedLoss, MaxMomentumTank);
+                    }
+
+                    if (ShowPowerFeedback)
+                    {
+                        Debug.Log($"<color=orange>Big momentum loss detected ({windowSpeedLoss:F1} m/s)! Grace window reset.</color>");
+                    }
+
+                    // Restart the window from the new (lower) speed so we don't immediately re-trigger
+                    _windowStartTime = Time.time;
+                    _windowStartSpeed = horizontalSpeed;
+                }
+            }
+
+            _previousHorizontalSpeed = horizontalSpeed;
+
+            // Rapidly decay the tank once the post-grab/post-impact grace window has expired
+            if (Time.time - _lastGrabTime > MomentumTankGraceWindow)
+            {
+                _momentumTank = Mathf.Max(0f, _momentumTank - (MomentumTankDecayRate * Time.deltaTime));
+            }
+        }
+
+        /// <summary>
+        /// Called whenever a hand successfully grabs onto something.
+        /// Resets the momentum tank's decay grace window and replenishes a dash charge.
+        /// </summary>
+        private void OnPlayerGrabbed()
+        {
+            _lastGrabTime = Time.time;
+
+            if (_airDashesRemaining < MaxAirDashes)
+            {
+                _airDashesRemaining++;
+
+                if (ShowPowerFeedback)
+                {
+                    Debug.Log($"<color=yellow>★ DASH CHARGED! ({_airDashesRemaining}/{MaxAirDashes}) ★</color>");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds momentum to the tank based on bounce speed. Bigger bounces build more momentum.
+        /// </summary>
+        /// NOTE: This may be jank since you are losing momentum a lot when bouncing which will double add momentum.
+        /// find a way to disable momentum from loss when bouncing? or just use it instead of adding momentum from bounce speed
+        private void AddMomentumFromBounce(float bounceSpeed)
+        {
+            float gain = bounceSpeed * BounceMomentumMultiplier;
+            _momentumTank = Mathf.Min(_momentumTank + gain, MaxMomentumTank);
+
+            if (ShowPowerFeedback)
+            {
+                Debug.Log($"<color=cyan>Momentum gained from bounce! ({_momentumTank:F1}/{MaxMomentumTank:F1})</color>");
+            }
+
+            // EXPERIMENTAL RESET: Reset the grace window on bounce, just like a grab would
+            _lastGrabTime = Time.time;
         }
 
         private void UpdateCameraTilt()
@@ -635,14 +751,23 @@ namespace KinematicCharacterController.Examples
                         // Request dash when shift is pressed and cooldown is ready
                         if (inputs.SprintDown && Time.time >= _lastDashTime + DashCooldown)
                         {
-                            // Can always dash on ground, or if we have air dashes remaining
-                            if (Motor.GroundingStatus.IsStableOnGround || _airDashesRemaining > 0)
+                            if (_airDashesRemaining <= 0)
+                            {
+                                if (ShowPowerFeedback)
+                                {
+                                    Debug.Log("<color=red>No dash charges remaining! Grab something to recharge.</color>");
+                                }
+                            }
+                            else if (_momentumTank <= 0f)
+                            {
+                                if (ShowPowerFeedback)
+                                {
+                                    Debug.Log("<color=red>Momentum tank is empty! Lose some speed first.</color>");
+                                }
+                            }
+                            else
                             {
                                 _dashRequested = true;
-                            }
-                            else if (ShowPowerFeedback)
-                            {
-                                Debug.Log("<color=red>No dashes remaining! Earn power through bounces.</color>");
                             }
                         }
 
@@ -766,6 +891,29 @@ namespace KinematicCharacterController.Examples
                         wantsGrabR = inputs.RightHand;
                         grabLDown = inputs.LeftHandDown;
                         grabRDown = inputs.RightHandDown;
+
+                        // Request dash while sliding (100% momentum transfer)
+                        if (inputs.SprintDown && Time.time >= _lastDashTime + DashCooldown)
+                        {
+                            if (_airDashesRemaining <= 0)
+                            {
+                                if (ShowPowerFeedback)
+                                {
+                                    Debug.Log("<color=red>No dash charges remaining! Grab something to recharge.</color>");
+                                }
+                            }
+                            else if (_momentumTank <= 0f)
+                            {
+                                if (ShowPowerFeedback)
+                                {
+                                    Debug.Log("<color=red>Momentum tank is empty! Lose some speed first.</color>");
+                                }
+                            }
+                            else
+                            {
+                                _dashRequested = true;
+                            }
+                        }
 
                         break;
                     }
@@ -997,6 +1145,7 @@ namespace KinematicCharacterController.Examples
                 if (fish != null)
                 {
                     isGrabbingL = true;
+                    OnPlayerGrabbed();
                     // NEW: Only set currentFish if not already set (left hand might have grabbed first)
                     if (currentFish == null)
                     {
@@ -1050,6 +1199,7 @@ namespace KinematicCharacterController.Examples
                         Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                         if (horizontalVel.magnitude >= leftHandhold.minDriftSpeed)
                         {
+                            OnPlayerGrabbed();
                             TransitionToState(CharacterState.Drifting);
                             _jumpConsumed = false;
                             Motor.ForceUnground();
@@ -1072,6 +1222,7 @@ namespace KinematicCharacterController.Examples
                     }
                 }
 
+                OnPlayerGrabbed();
                 TransitionToState(CharacterState.Climbing);
                 _jumpConsumed = false;
                 Motor.ForceUnground();
@@ -1089,6 +1240,7 @@ namespace KinematicCharacterController.Examples
                     leftHandGrabAnchor = grabPoint;
                     climbNormal = grabNormal;
 
+                    OnPlayerGrabbed();
                     TransitionToState(CharacterState.Climbing);
                     _jumpConsumed = false;
                     Motor.ForceUnground();
@@ -1113,6 +1265,7 @@ namespace KinematicCharacterController.Examples
                 if (fish != null)
                 {
                     isGrabbingR = true;
+                    OnPlayerGrabbed();
                     // NEW: Only set currentFish if not already set (left hand might have grabbed first)
                     if (currentFish == null)
                     {
@@ -1166,6 +1319,7 @@ namespace KinematicCharacterController.Examples
                         Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                         if (horizontalVel.magnitude >= rightHandhold.minDriftSpeed)
                         {
+                            OnPlayerGrabbed();
                             TransitionToState(CharacterState.Drifting);
                             _jumpConsumed = false;
                             Motor.ForceUnground();
@@ -1188,6 +1342,7 @@ namespace KinematicCharacterController.Examples
                     }
                 }
 
+                OnPlayerGrabbed();
                 TransitionToState(CharacterState.Climbing);
                 _jumpConsumed = false;
                 Motor.ForceUnground();
@@ -1206,6 +1361,7 @@ namespace KinematicCharacterController.Examples
                     rightHandGrabAnchor = grabPoint;
                     climbNormal = grabNormal;
 
+                    OnPlayerGrabbed();
                     TransitionToState(CharacterState.Climbing);
                     _jumpConsumed = false;
                     Motor.ForceUnground();
@@ -1573,39 +1729,7 @@ namespace KinematicCharacterController.Examples
                         // Handle dash request (works in air and on ground)
                         if (_dashRequested)
                         {
-                            // Use FULL camera direction (including vertical component)
-                            Vector3 cameraForward = playerCamera.transform.forward;
-                            Vector3 dashDir = cameraForward.normalized;
-
-                            // Apply dash velocity in full 3D direction
-                            if (!PreserveMomentumAfterDash)
-                            {
-                                // Replace velocity with dash (pure dash)
-                                currentVelocity = dashDir * DashForce;
-                            }
-                            else
-                            {
-                                // Add to existing velocity (momentum dash)
-                                currentVelocity += dashDir * DashForce;
-                            }
-
-                            // Track dash state
-                            _isDashing = true;
-                            _dashEndTime = Time.time + DashDuration;
-                            _dashDirection = dashDir;
-                            _lastDashTime = Time.time;
-                            _dashRequested = false;
-
-                            // Consume air dash if not grounded
-                            if (!Motor.GroundingStatus.IsStableOnGround)
-                            {
-                                _airDashesRemaining--;
-                            }
-
-                            // Force unground to allow air control
-                            Motor.ForceUnground();
-
-                            Debug.Log($"Dash! Direction: {dashDir}, Remaining Air Dashes: {_airDashesRemaining}");
+                            PerformDash(ref currentVelocity, false);
                         }
 
                         // Check if dash duration ended
@@ -1736,6 +1860,12 @@ namespace KinematicCharacterController.Examples
 
                 case CharacterState.Sliding:
                     {
+                        if (_dashRequested)
+                        {
+                            PerformDash(ref currentVelocity, true);
+                        }
+
+                        HandleSliding(ref currentVelocity, deltaTime);
                         HandleSliding(ref currentVelocity, deltaTime);
 
                         _jumpedThisFrame = false;
@@ -2028,6 +2158,51 @@ namespace KinematicCharacterController.Examples
 
             // Don't add extra momentum when exiting slide - just keep what we have
             _hasSlideBoost = false;
+        }
+
+        /// <summary>
+        /// Consumes the momentum tank (and a dash charge) to perform a dash.
+        /// Sliding dashes transfer 100% of the tank into dash speed; airborne/grounded dashes
+        /// transfer a reduced percentage. The tank is always fully emptied afterwards.
+        /// </summary>
+        private void PerformDash(ref Vector3 currentVelocity, bool isSliding)
+        {
+            // Use FULL camera direction (including vertical component)
+            Vector3 cameraForward = playerCamera.transform.forward;
+            Vector3 dashDir = cameraForward.normalized;
+
+            float transferPercent = isSliding ? DashSlideMomentumTransfer : DashAirMomentumTransfer;
+            float dashSpeed = _momentumTank * transferPercent;
+
+            // Apply dash velocity in full 3D direction
+            if (!PreserveMomentumAfterDash)
+            {
+                // Replace velocity with dash (pure dash)
+                currentVelocity = dashDir * dashSpeed;
+            }
+            else
+            {
+                // Add to existing velocity (momentum dash)
+                currentVelocity += dashDir * dashSpeed;
+            }
+
+            // Track dash state
+            _isDashing = true;
+            _dashEndTime = Time.time + DashDuration;
+            _dashDirection = dashDir;
+            _lastDashTime = Time.time;
+            _dashRequested = false;
+
+            // The tank is always fully emptied on dash, regardless of transfer percentage
+            _momentumTank = 0f;
+
+            // Consume a dash charge
+            _airDashesRemaining--;
+
+            // Force unground to allow air control
+            Motor.ForceUnground();
+
+            Debug.Log($"Dash! Direction: {dashDir}, Speed: {dashSpeed:F1}, Transfer: {transferPercent:P0}, Remaining Charges: {_airDashesRemaining}/{MaxAirDashes}");
         }
 
         /// <summary>
@@ -2645,17 +2820,8 @@ namespace KinematicCharacterController.Examples
                 // Clamp to min/max values
                 scaledBounceSpeed = Mathf.Clamp(scaledBounceSpeed, MinBounceSpeed, MaxBounceSpeed);
 
-                // Check if bounce qualifies for power gain
-                bool bounceInRange = scaledBounceSpeed >= MinBounceSpeedForPower && scaledBounceSpeed <= MaxBounceSpeedForPower;
-
-                if (bounceInRange)
-                {
-                    GainPower(1);
-                }
-                else if (ShowPowerFeedback)
-                {
-                    Debug.Log($"Bounce speed {scaledBounceSpeed:F1} out of range ({MinBounceSpeedForPower:F1}-{MaxBounceSpeedForPower:F1})");
-                }
+                // Build momentum based on the size of the bounce
+                // AddMomentumFromBounce(scaledBounceSpeed);
 
                 Vector3 bounceVelocity = bounceNormal * scaledBounceSpeed;
 
@@ -2688,56 +2854,6 @@ namespace KinematicCharacterController.Examples
         }
 
         // Add these new methods after OnLanded (around line 1775):
-
-        /// <summary>
-        /// Gain power and potentially restore a dash charge
-        /// </summary>
-        private void GainPower(int amount)
-        {
-            _currentPower += amount;
-
-            if (ShowPowerFeedback)
-            {
-                Debug.Log($"<color=cyan>Power gained! ({_currentPower}/{PowerRequiredPerDash})</color>");
-            }
-
-            // Check if we have enough power to gain a dash
-            if (_currentPower >= PowerRequiredPerDash)
-            {
-                // Reset power
-                _currentPower -= PowerRequiredPerDash;
-
-                // Grant a dash charge (up to max)
-                if (_airDashesRemaining < MaxAirDashes)
-                {
-                    _airDashesRemaining++;
-
-                    if (ShowPowerFeedback)
-                    {
-                        Debug.Log($"<color=yellow>★ DASH CHARGED! ({_airDashesRemaining}/{MaxAirDashes}) ★</color>");
-                    }
-                }
-                else if (ShowPowerFeedback)
-                {
-                    Debug.Log($"<color=orange>Dash already at max! Power wasted.</color>");
-                }
-            }
-        }
-
-        public void AddPower(int amount)
-        {
-            GainPower(amount);
-        }
-
-        public int GetCurrentPower()
-        {
-            return _currentPower;
-        }
-
-        public void ResetPower()
-        {
-            _currentPower = 0;
-        }
 
         protected void OnLeaveStableGround()
         {
