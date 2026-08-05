@@ -6800,21 +6800,20 @@ MonoBehaviour:
   DashCooldown: 0.3
   MaxAirDashes: 1
   DashDuration: 0.15
-  PreserveMomentumAfterDash: 1
+  PreserveMomentumAfterDash: 0
   MaxMomentumTank: 30
   MomentumTankDecayRate: 20
   MomentumTankGraceWindow: 1.5
   _momentumTank: 0
   DashSlideMomentumTransfer: 1
-  DashAirMomentumTransfer: 1
+  DashAirMomentumTransfer: 0.8
   MinBounceSpeedForPower: 12
   MaxBounceSpeedForPower: 25
   BounceMomentumMultiplier: 1
   ShowPowerFeedback: 1
-  OnlyGainMomentumFromBigLoss: 0
+  OnlyGainMomentumFromBigLoss: 1
   BigMomentumLossWindow: 0.25
-  BigMomentumLossThreshold: 15
-  MinSpeedThresholdForMomentumLoss: 10
+  BigMomentumLossThreshold: 8
   AllowJumpingWhenSliding: 1
   JumpUpSpeed: 13
   JumpScalableForwardSpeed: 0
