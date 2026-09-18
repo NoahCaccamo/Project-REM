@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 public class BlitToRTHandleRendererFeature : ScriptableRendererFeature
 {
     private BlitToRTHandlePass m_CopyColorPass;
-    private RenderPassEvent m_CopyColorEvent = RenderPassEvent.AfterRenderingTransparents;
+    private RenderPassEvent m_CopyColorEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
     public Material blitMaterial;
 

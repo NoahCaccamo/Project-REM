@@ -288,6 +288,7 @@ namespace KinematicCharacterController.Examples
                 GameObject canvasObj = new GameObject("SpeedDisplayCanvas");
                 Canvas canvas = canvasObj.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 2;
                 canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
                 canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 

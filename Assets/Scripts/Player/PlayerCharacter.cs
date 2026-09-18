@@ -32,7 +32,7 @@ public class PlayerCharacter : MonoBehaviour
         DontDestroyOnLoad(this.gameObject);
         CurrentStats = new CharacterStats(BaseStats);
         // TEMP LOAD SCENE FOR BUILD
-        StartCoroutine(LoadSceneAdditive("Mountain"));
+        // StartCoroutine(LoadSceneAdditive("Mountain"));
 
     }
 
