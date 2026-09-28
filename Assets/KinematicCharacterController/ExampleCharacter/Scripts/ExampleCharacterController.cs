@@ -16,8 +16,7 @@ namespace KinematicCharacterController.Examples
         Default,
         Climbing,
         Sliding,
-        WallRunning,
-        Drifting
+        WallRunning
     }
 
     public enum OrientationMethod
@@ -125,11 +124,13 @@ namespace KinematicCharacterController.Examples
 
         [Header("Momentum Tank - Big Loss Detection")]
         [Tooltip("EXPERIMENTAL: If true, the tank ONLY gains momentum from big losses detected within the short window, ignoring gradual/small frame-to-frame speed loss.")]
-        public bool OnlyGainMomentumFromBigLoss = true;
+        public bool OnlyGainMomentumFromBigLoss = false;
         [Tooltip("Time window (seconds) within which a momentum drop is considered a 'big loss'")]
         public float BigMomentumLossWindow = 0.25f;
         [Tooltip("Minimum speed lost within the window to count as a big loss and reset the grace window")]
         public float BigMomentumLossThreshold = 8f;
+        [Tooltip("Momentum lost while the player's current speed is at or below this threshold will NOT be added to the tank")]
+        public float MinSpeedThresholdForMomentumLoss = 3f;
         private float _windowStartTime = 0f;
         private float _windowStartSpeed = 0f;
 
@@ -381,7 +382,7 @@ namespace KinematicCharacterController.Examples
             if (!OnlyGainMomentumFromBigLoss)
             {
                 float speedLoss = _previousHorizontalSpeed - horizontalSpeed;
-                if (speedLoss > 0f)
+                if (speedLoss > 0f && horizontalSpeed > MinSpeedThresholdForMomentumLoss)
                 {
                     _momentumTank = Mathf.Min(_momentumTank + speedLoss, MaxMomentumTank);
                 }
@@ -403,7 +404,7 @@ namespace KinematicCharacterController.Examples
                     _lastGrabTime = Time.time;
 
                     // EXPERIMENTAL: Only gain momentum here, exclusively from big losses
-                    if (OnlyGainMomentumFromBigLoss)
+                    if (OnlyGainMomentumFromBigLoss && horizontalSpeed > MinSpeedThresholdForMomentumLoss)
                     {
                         _momentumTank = Mathf.Min(_momentumTank + windowSpeedLoss, MaxMomentumTank);
                     }
@@ -541,38 +542,6 @@ namespace KinematicCharacterController.Examples
 
                         break;
                     }
-                case CharacterState.Drifting:
-                    {
-                        // Store initial momentum magnitude (not direction)
-                        Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
-                        float initialSpeed = horizontalVel.magnitude;
-                        _driftSpeed = initialSpeed;
-                        _momentumGrabTime = Time.time;
-
-                        if (isGrabbingL && leftHandhold != null && leftHandhold.handholdType == HandholdType.Drift)
-                        {
-                            _driftPolePosition = leftHandGrabAnchor;
-                            _driftRadius = leftHandhold.driftRadius;
-                            _momentumGraceWindow = leftHandhold.driftMomentumWindow;
-                            _momentumRetention = leftHandhold.driftMomentumRetention;
-                            _driftMinMomentum = leftHandhold.driftMinMomentum; // NEW
-                        }
-                        else if (isGrabbingR && rightHandhold != null && rightHandhold.handholdType == HandholdType.Drift)
-                        {
-                            _driftPolePosition = rightHandGrabAnchor;
-                            _driftRadius = rightHandhold.driftRadius;
-                            _momentumGraceWindow = rightHandhold.driftMomentumWindow;
-                            _momentumRetention = rightHandhold.driftMomentumRetention;
-                            _driftMinMomentum = rightHandhold.driftMinMomentum; // NEW
-                        }
-
-                        // Store SPEED (magnitude) not direction - direction will be player facing on release
-                        _storedHorizontalMomentum = Vector3.zero; // Clear directional momentum
-                        _hasMomentumToRestore = true;
-
-                        Debug.Log($"Drift started! Stored speed: {_driftSpeed:F2} m/s, Min momentum: {_driftMinMomentum:F2} m/s");
-                        break;
-                    }
                 case CharacterState.WallRunning:
                     {
                         _wallRunTimer = 0f;
@@ -630,33 +599,6 @@ namespace KinematicCharacterController.Examples
                         _hasMomentumToRestore = false;
                         _storedHorizontalMomentum = Vector3.zero;
 
-                        leftHandhold = null;
-                        rightHandhold = null;
-                        break;
-                    }
-                case CharacterState.Drifting:
-                    {
-                        // NEW: Redirect momentum in player's facing direction
-                        if (toState == CharacterState.Default && _hasMomentumToRestore)
-                        {
-                            float timeSinceGrab = Time.time - _momentumGrabTime;
-                            if (timeSinceGrab <= _momentumGraceWindow)
-                            {
-                                // Get player's facing direction (horizontal plane)
-                                Vector3 facingDirection = Vector3.ProjectOnPlane(Motor.CharacterForward, Motor.CharacterUp).normalized;
-
-                                // Apply stored speed in facing direction with retention multiplier
-                                float exitSpeed = Mathf.Max(_driftSpeed, _driftMinMomentum) * _momentumRetention;
-                                Vector3 redirectedMomentum = facingDirection * exitSpeed;
-
-                                _internalVelocityAdd = redirectedMomentum;
-                                Debug.Log($"Drift exit! Speed: {exitSpeed:F2} m/s in direction: {facingDirection}");
-                            }
-                        }
-
-                        _hasMomentumToRestore = false;
-                        _storedHorizontalMomentum = Vector3.zero;
-                        _driftSpeed = 0f;
                         leftHandhold = null;
                         rightHandhold = null;
                         break;
@@ -919,8 +861,8 @@ namespace KinematicCharacterController.Examples
                         break;
                     }
 
+                    // this used to have drifting and climbing in the same line - recheck if things are funky
                 case CharacterState.Climbing:
-                case CharacterState.Drifting:
                     {
                         // Change move input to be where youre looking
                         _moveInputVector = inputs.CameraRotation * moveInputVector;
@@ -1193,35 +1135,6 @@ namespace KinematicCharacterController.Examples
                 leftHandGrabAnchor = leftHandHit.point;
                 climbNormal = leftHandHit.normal;
 
-                if (leftHandhold != null && leftHandhold.handholdType == HandholdType.Drift)
-                {
-                    if (CurrentCharacterState == CharacterState.Sliding)
-                    {
-                        Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
-                        if (horizontalVel.magnitude >= leftHandhold.minDriftSpeed)
-                        {
-                            OnPlayerGrabbed();
-                            TransitionToState(CharacterState.Drifting);
-                            _jumpConsumed = false;
-                            Motor.ForceUnground();
-                            return;
-                        }
-                        else
-                        {
-                            isGrabbingL = false;
-                            LeftHandController.OpenHand();
-                            Debug.Log("Not fast enough to drift! Need to be sliding faster.");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        isGrabbingL = false;
-                        LeftHandController.OpenHand();
-                        Debug.Log("Must be sliding to grab drift pole!");
-                        return;
-                    }
-                }
 
                 OnPlayerGrabbed();
                 TransitionToState(CharacterState.Climbing);
@@ -1312,36 +1225,6 @@ namespace KinematicCharacterController.Examples
                 Vector3 handVisualPosition = rightHandHit.point + rightHandHit.normal * handSurfaceOffset;
                 RightHandController.StartGrab(rightHandHit.point);
                 rightHandGrabAnchor = rightHandHit.point;
-
-                if (rightHandhold != null && rightHandhold.handholdType == HandholdType.Drift)
-                {
-                    if (CurrentCharacterState == CharacterState.Sliding)
-                    {
-                        Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
-                        if (horizontalVel.magnitude >= rightHandhold.minDriftSpeed)
-                        {
-                            OnPlayerGrabbed();
-                            TransitionToState(CharacterState.Drifting);
-                            _jumpConsumed = false;
-                            Motor.ForceUnground();
-                            return;
-                        }
-                        else
-                        {
-                            isGrabbingR = false;
-                            RightHandController.OpenHand();
-                            Debug.Log("Not fast enough to drift! Need to be sliding faster.");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        isGrabbingR = false;
-                        RightHandController.OpenHand();
-                        Debug.Log("Must be sliding to grab drift pole!");
-                        return;
-                    }
-                }
 
                 OnPlayerGrabbed();
                 TransitionToState(CharacterState.Climbing);
@@ -1483,18 +1366,6 @@ namespace KinematicCharacterController.Examples
                 Gizmos.DrawRay(Motor.TransientPosition, _storedHorizontalMomentum);
             }
 
-            if (CurrentCharacterState == CharacterState.Drifting)
-            {
-                Gizmos.color = Color.yellow;
-                DrawCircleGizmo(_driftPolePosition, _driftRadius);
-                Gizmos.DrawLine(_driftPolePosition, Motor.TransientPosition);
-
-                // NEW: Draw exit direction (where momentum will be redirected)
-                Gizmos.color = Color.green;
-                Vector3 exitDirection = Vector3.ProjectOnPlane(Motor.CharacterForward, Motor.CharacterUp).normalized;
-                Gizmos.DrawRay(Motor.TransientPosition, exitDirection * _driftSpeed * _momentumRetention);
-            }
-
             if (CurrentCharacterState == CharacterState.Sliding)
             {
                 Gizmos.color = Color.blue;
@@ -1578,11 +1449,6 @@ namespace KinematicCharacterController.Examples
             }
 
             if (!isGrabbingL && !isGrabbingR && CurrentCharacterState == CharacterState.Climbing)
-            {
-                TransitionToState(CharacterState.Default);
-            }
-
-            if (!isGrabbingL && !isGrabbingR && CurrentCharacterState == CharacterState.Drifting)
             {
                 TransitionToState(CharacterState.Default);
             }
@@ -1698,16 +1564,6 @@ namespace KinematicCharacterController.Examples
         /// </summary>
                 case CharacterState.Sliding:
                     {
-                        if (_lookInputVector.sqrMagnitude > 0f && OrientationSharpness > 0f)
-                        {
-                            currentRotation = Quaternion.Slerp(currentRotation, Quaternion.LookRotation(_lookInputVector, Motor.CharacterUp), 1f - Mathf.Exp(-OrientationSharpness * deltaTime));
-                        }
-                        break;
-                    }
-
-                case CharacterState.Drifting:
-                    {
-                        // NEW: Allow player to rotate freely during drift (camera controls facing)
                         if (_lookInputVector.sqrMagnitude > 0f && OrientationSharpness > 0f)
                         {
                             currentRotation = Quaternion.Slerp(currentRotation, Quaternion.LookRotation(_lookInputVector, Motor.CharacterUp), 1f - Mathf.Exp(-OrientationSharpness * deltaTime));
@@ -1867,7 +1723,6 @@ namespace KinematicCharacterController.Examples
                         }
 
                         HandleSliding(ref currentVelocity, deltaTime);
-                        HandleSliding(ref currentVelocity, deltaTime);
 
                         _jumpedThisFrame = false;
                         _timeSinceJumpRequested += deltaTime;
@@ -1940,38 +1795,6 @@ namespace KinematicCharacterController.Examples
                                 LeftHandController.StopGrab();
                                 RightHandController.StopGrab();
                                 // MAKE A TIMER WHERE YOU CANT GRAB FOR A LITTLE WHEN JUMPING
-                            }
-                        }
-                        break;
-                    }
-
-                case CharacterState.Drifting:
-                    {
-                        HandleDriftVelocity(ref currentVelocity, deltaTime);
-
-                        if (_jumpRequested)
-                        {
-                            if (!_jumpConsumed)
-                            {
-                                Motor.ForceUnground();
-
-                                // NEW: Redirect momentum in facing direction on jump
-                                Vector3 facingDirection = Vector3.ProjectOnPlane(Motor.CharacterForward, Motor.CharacterUp).normalized;
-                                float exitSpeed = Mathf.Max(_driftSpeed, _driftMinMomentum) * _momentumRetention;
-
-                                currentVelocity = (facingDirection * exitSpeed) + (Motor.CharacterUp * JumpUpSpeed);
-
-                                _jumpRequested = false;
-                                _jumpConsumed = true;
-                                _jumpedThisFrame = true;
-
-                                Debug.Log($"Drift jump! Speed: {exitSpeed:F2} m/s, Direction: {facingDirection}");
-
-                                TransitionToState(CharacterState.Default);
-                                isGrabbingL = false;
-                                isGrabbingR = false;
-                                LeftHandController.StopGrab();
-                                RightHandController.StopGrab();
                             }
                         }
                         break;
@@ -2321,95 +2144,6 @@ namespace KinematicCharacterController.Examples
             else
             {
                 HandleStaticClimbVelocity(ref currentVelocity, deltaTime);
-            }
-        }
-
-        /// <summary>
-        /// REWORKED: Drift pole physics - maintains minimum momentum, redirects on exit
-        /// </summary>
-        private void HandleDriftVelocity(ref Vector3 currentVelocity, float deltaTime)
-        {
-            Handhold driftHandhold = (leftHandhold != null && leftHandhold.handholdType == HandholdType.Drift)
-                ? leftHandhold
-                : rightHandhold;
-
-            if (driftHandhold == null)
-            {
-                TransitionToState(CharacterState.Default);
-                return;
-            }
-
-            // Calculate position relative to pole (horizontal plane only)
-            Vector3 horizontalPosition = new Vector3(Motor.TransientPosition.x, _driftPolePosition.y, Motor.TransientPosition.z);
-            Vector3 poleCenter = new Vector3(_driftPolePosition.x, _driftPolePosition.y, _driftPolePosition.z);
-            Vector3 toPlayer = horizontalPosition - poleCenter;
-            float currentDistance = toPlayer.magnitude;
-
-            if (currentDistance < 0.01f)
-            {
-                TransitionToState(CharacterState.Default);
-                return;
-            }
-
-        /// SORT THIS OUT FUCKIN MESS SECTION
-        /// 
-
-            Vector3 radialDirection = toPlayer / currentDistance;
-            Vector3 tangentDirection = Vector3.Cross(Vector3.up, radialDirection).normalized;
-
-            // Decompose velocity into radial and tangential components (horizontal plane only)
-            Vector3 horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-            float radialVelocity = Vector3.Dot(horizontalVelocity, radialDirection);
-            float tangentialVelocity = Vector3.Dot(horizontalVelocity, tangentDirection);
-
-            // CONSTRAIN TO DRIFT RADIUS using spring force
-            float radiusError = currentDistance - _driftRadius;
-            float radialForce = -radiusError * driftHandhold.driftRadiusSpring;
-
-            // Damp radial velocity to prevent oscillation
-            radialForce -= radialVelocity * (driftHandhold.driftRadiusSpring * 0.5f);
-
-            // Apply radial force
-            radialVelocity += radialForce * deltaTime;
-
-            // HARD CLAMP: Kill outward velocity if exceeding radius significantly
-            if (currentDistance > _driftRadius * 1.1f && radialVelocity > 0f)
-            {
-                radialVelocity = 0f;
-            }
-
-            // NEW: MAINTAIN MINIMUM MOMENTUM during drift
-            float currentTangentialSpeed = Mathf.Abs(tangentialVelocity);
-            if (currentTangentialSpeed < _driftMinMomentum)
-            {
-                // Boost tangential velocity to maintain minimum speed
-                float sign = Mathf.Sign(tangentialVelocity);
-                if (sign == 0f) sign = 1f; // Default to positive if no velocity
-                tangentialVelocity = sign * _driftMinMomentum;
-            }
-            else
-            {
-                // Apply minimal damping only if above minimum
-                tangentialVelocity *= Mathf.Pow(1f - driftHandhold.driftDamping, deltaTime);
-            }
-
-            // Update stored drift speed for exit
-            _driftSpeed = Mathf.Abs(tangentialVelocity);
-
-            // Reconstruct horizontal velocity
-            horizontalVelocity = (radialDirection * radialVelocity) + (tangentDirection * tangentialVelocity);
-
-            // Update velocity (preserve vertical component)
-            currentVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
-
-            // Apply gravity (full gravity for natural pendulum feel)
-            currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
-
-            // Take into account additive velocity
-            if (_internalVelocityAdd.sqrMagnitude > 0f)
-            {
-                currentVelocity += _internalVelocityAdd;
-                _internalVelocityAdd = Vector3.zero;
             }
         }
 
