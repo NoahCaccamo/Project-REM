@@ -6,6 +6,7 @@ namespace KinematicCharacterController.Examples
     {
         private Vector3 _slideDirection;
         private float _slideSpeed;
+        private float _slideStrafeInput;
 
         [Header("Sliding")]
         [SerializeField] private float slideInitialBoost = 0f;
@@ -16,6 +17,7 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float flatFrictionMultiplier = 5f;
         [SerializeField] private float slideSteeringSpeed = 5f;
         [SerializeField] private float slideSteeringSharpness = 8f;
+        [SerializeField] private float slideStrafeSpeed = 2f;
 
         [Header("Slide Momentum Boost")]
         [SerializeField] private float slideMinMomentumThreshold = 8f;
@@ -31,7 +33,7 @@ namespace KinematicCharacterController.Examples
             Vector3 horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
             float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
-            Vector3 desiredDirection = _moveInputVector;
+            Vector3 desiredDirection = _lookInputVector;
 
             if (desiredDirection.sqrMagnitude < 0.01f)
             {
@@ -76,18 +78,6 @@ namespace KinematicCharacterController.Examples
                 }
             }
 
-            // Apply slope acceleration only downhill
-            if (downhillDot > 0f)
-            {
-                float slideAcceleration = 9.81f * Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * slideGravityMultiplier;
-                currentVelocity += _slideDirection * slideAcceleration * deltaTime * downhillDot;
-            }
-
-            if (_moveInputVector.sqrMagnitude > 0.01f)
-            {
-                Vector3 steeringForce = desiredDirection * slideSteeringSpeed * deltaTime;
-                currentVelocity += steeringForce;
-            }
 
             // Apply friction (reduced during boost period)
             float frictionMultiplier = 1f;
@@ -109,6 +99,18 @@ namespace KinematicCharacterController.Examples
                 horizontalVelocity = horizontalVelocity.normalized * maxSlideSpeed;
                 currentVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
             }
+
+            // Left and right strafing
+            Vector3 rightDir = Vector3.Cross(groundNormal, _slideDirection).normalized;
+
+            // Decompose current horizontal velocity into forward and lateral components
+            float forwardSpeed = Vector3.Dot(horizontalVelocity, _slideDirection);
+            Vector3 forwardVelocity = _slideDirection * forwardSpeed;
+
+            Vector3 lateralVelocity = rightDir * (_slideStrafeInput * slideStrafeSpeed);
+
+            Vector3 newHorizontalVelocity = forwardVelocity + lateralVelocity;
+            currentVelocity = new Vector3(newHorizontalVelocity.x, currentVelocity.y, newHorizontalVelocity.z);
 
             // Update stored direction for next frame (so we gradually re-align)
             _slideSpeed = horizontalVelocity.magnitude;

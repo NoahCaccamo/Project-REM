@@ -350,6 +350,8 @@ namespace KinematicCharacterController.Examples
                         // Move and look inputs
                         _moveInputVector = cameraPlanarRotation * moveInputVector;
 
+                        _slideStrafeInput = moveInputVector.x;
+
                         switch (OrientationMethod)
                         {
                             case OrientationMethod.TowardsCamera:
@@ -500,6 +502,8 @@ namespace KinematicCharacterController.Examples
                 case CharacterState.Sliding:
                     {
                         _moveInputVector = cameraPlanarRotation * moveInputVector;
+
+                        _slideStrafeInput = moveInputVector.x;
 
                         switch (OrientationMethod)
                         {
