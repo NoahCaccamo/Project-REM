@@ -4261,6 +4261,7 @@ MonoBehaviour:
     rotationY: 250
     shadowType: 2
     shadowStrength: 1
+    environmentIntensityMultiplier: 1
   nightSettings:
     color: {r: 0.5254902, g: 0.654902, b: 1, a: 1}
     intensity: 0.68
@@ -4268,6 +4269,7 @@ MonoBehaviour:
     rotationY: 250
     shadowType: 2
     shadowStrength: 1
+    environmentIntensityMultiplier: 1
   lightGroups:
   - groupName: 
     lights: []
@@ -8399,6 +8401,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76020eee813ed7844bcea94c5d5ce76a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  grabRadius: 0.1
+  grabDistance: 3
+  climbMoveSpeed: 1
+  maxStaticClimbRadius: 2.5
+  maxMomentumSwingRadius: 5
+  momentumSwingDamping: 0.5
+  handSurfaceOffset: 0.05
+  fishLayer:
+    serializedVersion: 2
+    m_Bits: 131072
+  forwardCheckDistance: 1.2
+  ledgeHeight: 1.5
+  ledgeDropDistance: 2
+  isGrabbingL: 0
+  isGrabbingR: 0
   Motor: {fileID: 6615662580611611646}
   playerCamera: {fileID: 5553693056096936871}
   playerCharacter: {fileID: 0}
@@ -8416,7 +8433,6 @@ MonoBehaviour:
   momentumDecayRate: 0.5
   maxMomentumSpeed: 25
   speedRetentionOnLanding: 0.8
-  speedDisplay: {fileID: 0}
   MaxStableMoveSpeed: 10
   StableMovementSharpness: 15
   OrientationSharpness: 20
@@ -8425,6 +8441,42 @@ MonoBehaviour:
   AirAccelerationSpeed: 30
   AirStrafeMultiplier: 1.5
   Drag: 0.1
+  AllowJumpingWhenSliding: 1
+  JumpUpSpeed: 13
+  JumpScalableForwardSpeed: 0
+  JumpPreGroundingGraceTime: 0.1
+  JumpPostGroundingGraceTime: 0.1
+  PreserveHorizontalMomentumOnJump: 1
+  EnableBounce: 1
+  BounceSpeed: 15
+  BounceSpeedMultiplier: 0.51
+  MinBounceSpeed: 0.54
+  MaxBounceSpeed: 30
+  BounceAirAccelerationMultiplier: 0.6
+  BounceVelocityRedirection: 0.8
+  _hasMovedWhileClimbing: 0
+  defaultMemoryType: {fileID: 11400000, guid: ce65cbba119a08a4eae8ea56debc352f, type: 2}
+  climbableLayer:
+    serializedVersion: 2
+    m_Bits: 2048
+  wallLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 4096
+  deliveryWaypoint: {fileID: 5573864683772550981}
+  IgnoredColliders:
+  - {fileID: 0}
+  - {fileID: 0}
+  BonusOrientationMethod: 1
+  BonusOrientationSharpness: 20
+  Gravity: {x: 0, y: -30, z: 0}
+  MeshRoot: {fileID: 6510422302040278518}
+  CameraFollowPoint: {fileID: 6505238199867825826}
+  CrouchedCapsuleHeight: 1
+  walkSpeed: 5
+  sprintSpeed: 13
   DashForce: 20
   DashCooldown: 0.3
   MaxAirDashes: 1
@@ -8444,19 +8496,16 @@ MonoBehaviour:
   BigMomentumLossWindow: 0.25
   BigMomentumLossThreshold: 10
   MinSpeedThresholdForMomentumLoss: 10
-  AllowJumpingWhenSliding: 1
-  JumpUpSpeed: 13
-  JumpScalableForwardSpeed: 0
-  JumpPreGroundingGraceTime: 0.1
-  JumpPostGroundingGraceTime: 0.1
-  PreserveHorizontalMomentumOnJump: 1
-  EnableBounce: 1
-  BounceSpeed: 15
-  BounceSpeedMultiplier: 0.51
-  MinBounceSpeed: 0.54
-  MaxBounceSpeed: 30
-  BounceAirAccelerationMultiplier: 0.6
-  BounceVelocityRedirection: 0.8
+  slideBaseSpeed: 16
+  slideDecelRate: 4
+  minSlideAngle: 0
+  slideSteeringSharpness: 8
+  slideStrafeSpeed: 3
+  slideMaxTimer: 3
+  slideMinTimer: 1
+  slideEndDecelRate: 20
+  slideEndStopSpeed: 0.5
+  speedDisplay: {fileID: 0}
   EnableWallRunning: 1
   WallRunSpeed: 12
   WallRunMaxDuration: 2
@@ -8469,54 +8518,6 @@ MonoBehaviour:
   WallRunCameraTilt: 15
   CameraTiltSpeed: 8
   WallRunSpeedDecay: 0.95
-  grabRadius: 0.1
-  grabDistance: 3
-  climbMoveSpeed: 1
-  maxStaticClimbRadius: 2.5
-  maxMomentumSwingRadius: 5
-  momentumSwingDamping: 0.5
-  _hasMovedWhileClimbing: 0
-  defaultMemoryType: {fileID: 11400000, guid: ce65cbba119a08a4eae8ea56debc352f, type: 2}
-  climbableLayer:
-    serializedVersion: 2
-    m_Bits: 2048
-  wallLayer:
-    serializedVersion: 2
-    m_Bits: 256
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 4096
-  isGrabbingL: 0
-  isGrabbingR: 0
-  deliveryWaypoint: {fileID: 5573864683772550981}
-  IgnoredColliders:
-  - {fileID: 0}
-  - {fileID: 0}
-  BonusOrientationMethod: 1
-  BonusOrientationSharpness: 20
-  Gravity: {x: 0, y: -30, z: 0}
-  MeshRoot: {fileID: 6510422302040278518}
-  CameraFollowPoint: {fileID: 6505238199867825826}
-  CrouchedCapsuleHeight: 1
-  handSurfaceOffset: 0.05
-  fishLayer:
-    serializedVersion: 2
-    m_Bits: 131072
-  forwardCheckDistance: 1.2
-  ledgeHeight: 1.5
-  ledgeDropDistance: 2
-  walkSpeed: 5
-  sprintSpeed: 8
-  slideInitialBoost: 6
-  slideGravityMultiplier: 20
-  slideFriction: 2
-  maxSlideSpeed: 50
-  minSlideAngle: 0
-  flatFrictionMultiplier: 1
-  slideSteeringSpeed: 5
-  slideSteeringSharpness: 8
-  slideMinMomentumThreshold: 10
-  slideMomentumBoostDuration: 1.5
 --- !u!114 &6615662580611611646
 MonoBehaviour:
   m_ObjectHideFlags: 0
