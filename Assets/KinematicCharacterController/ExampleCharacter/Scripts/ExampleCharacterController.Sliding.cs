@@ -9,21 +9,18 @@ namespace KinematicCharacterController.Examples
         private float _slideStrafeInput;
 
         [Header("Sliding")]
-        [SerializeField] private float slideInitialBoost = 0f;
-        [SerializeField] private float slideGravityMultiplier = 1.3f;
-        [SerializeField] private float slideFriction = 2f;
-        [SerializeField] private float maxSlideSpeed = 20f;
+        [SerializeField] private float slideBaseSpeed = 16f;
+        [SerializeField] private float slideDecelRate = 4f;
         [SerializeField] private float minSlideAngle = 10f;
-        [SerializeField] private float flatFrictionMultiplier = 5f;
-        [SerializeField] private float slideSteeringSpeed = 5f;
         [SerializeField] private float slideSteeringSharpness = 8f;
         [SerializeField] private float slideStrafeSpeed = 2f;
 
-        [Header("Slide Momentum Boost")]
-        [SerializeField] private float slideMinMomentumThreshold = 8f;
-        [SerializeField] private float slideMomentumBoostDuration = 0.5f;
-        private float _slideMomentumBoostTimer = 0f;
-        private bool _hasSlideBoost = false;
+        [Header("Slide Timer")]
+        [SerializeField] private float slideMaxTimer = 3f;
+        [SerializeField] private float slideMinTimer = 1f;
+        [SerializeField] private float slideEndDecelRate = 20f;
+        [SerializeField] private float slideEndStopSpeed = 0.5f;
+        private float _slideTimer = 0f;
 
         private void HandleSliding(ref Vector3 currentVelocity, float deltaTime)
         {
@@ -31,7 +28,6 @@ namespace KinematicCharacterController.Examples
             float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
 
             Vector3 horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-            float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
             Vector3 desiredDirection = _lookInputVector;
 
@@ -57,104 +53,65 @@ namespace KinematicCharacterController.Examples
 
             Vector3 downhillDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
             float downhillDot = Vector3.Dot(_slideDirection, downhillDirection);
+            bool isGoingDownhill = slopeAngle > minSlideAngle && downhillDot > 0f;
 
-            // Update boost timer
-            if (_hasSlideBoost)
+            // Slide timer: counts down while sliding on the ground, pauses while going downhill,
+            // and never drops below the specified minimum.
+            bool timerHasEnded = _slideTimer <= slideMinTimer;
+
+            if (!isGoingDownhill)
             {
-                _slideMomentumBoostTimer += deltaTime;
-
-                // Maintain minimum threshold speed during boost period
-                if (_slideMomentumBoostTimer < slideMomentumBoostDuration)
-                {
-                    if (currentHorizontalSpeed < slideMinMomentumThreshold)
-                    {
-                        // Maintain threshold speed during boost period
-                        currentVelocity = new Vector3(_slideDirection.x * slideMinMomentumThreshold, currentVelocity.y, _slideDirection.z * slideMinMomentumThreshold);
-                    }
-                }
-                else
-                {
-                    _hasSlideBoost = false; // Boost period ended
-                }
+                _slideTimer -= deltaTime;
+            }
+            if (_slideTimer < slideMinTimer)
+            {
+                _slideTimer = slideMinTimer;
             }
 
+            float forwardSpeed = Vector3.Dot(horizontalVelocity, _slideDirection);
 
-            // Apply friction (reduced during boost period)
-            float frictionMultiplier = 1f;
-            if (slopeAngle <= minSlideAngle) frictionMultiplier = flatFrictionMultiplier;
-            if (downhillDot < 0f) frictionMultiplier *= 2f;
-
-            // Reduce friction during boost period to help maintain speed
-            if (_hasSlideBoost && _slideMomentumBoostTimer < slideMomentumBoostDuration)
+            if (timerHasEnded)
             {
-                frictionMultiplier *= 0.3f;
+                // Timer ran out: rapidly decelerate to a stop instead of holding at base speed.
+                forwardSpeed = Mathf.Max(0f, forwardSpeed - (slideEndDecelRate * deltaTime));
+            }
+            else if (forwardSpeed > slideBaseSpeed)
+            {
+                // Forward speed: decelerate towards base speed, never going below it.
+                // Sliding downhill is treated the same as flat/horizontal sliding (no extra speed from slope).
+                forwardSpeed = Mathf.Max(slideBaseSpeed, forwardSpeed - (slideDecelRate * deltaTime));
+            }
+            else
+            {
+                forwardSpeed = slideBaseSpeed;
             }
 
-            currentVelocity *= 1f - (slideFriction * frictionMultiplier * deltaTime);
-
-            // Clamp max speed
-            horizontalVelocity = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
-            if (horizontalVelocity.magnitude > maxSlideSpeed)
-            {
-                horizontalVelocity = horizontalVelocity.normalized * maxSlideSpeed;
-                currentVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
-            }
+            Vector3 forwardVelocity = _slideDirection * forwardSpeed;
 
             // Left and right strafing
             Vector3 rightDir = Vector3.Cross(groundNormal, _slideDirection).normalized;
-
-            // Decompose current horizontal velocity into forward and lateral components
-            float forwardSpeed = Vector3.Dot(horizontalVelocity, _slideDirection);
-            Vector3 forwardVelocity = _slideDirection * forwardSpeed;
-
             Vector3 lateralVelocity = rightDir * (_slideStrafeInput * slideStrafeSpeed);
 
             Vector3 newHorizontalVelocity = forwardVelocity + lateralVelocity;
             currentVelocity = new Vector3(newHorizontalVelocity.x, currentVelocity.y, newHorizontalVelocity.z);
 
-            // Update stored direction for next frame (so we gradually re-align)
-            _slideSpeed = horizontalVelocity.magnitude;
-        }
+            _slideSpeed = newHorizontalVelocity.magnitude;
 
+            // Once the timer has ended and speed has bled off, end the slide.
+            if (timerHasEnded && forwardSpeed <= slideEndStopSpeed)
+            {
+                StopSlide();
+            }
+        }
 
         private void StartSlide()
         {
-            CurrentCharacterState = CharacterState.Sliding;
-
-            Vector3 currentVelocity = Motor.BaseVelocity;
-            float currentHorizontalSpeed = new Vector3(currentVelocity.x, 0f, currentVelocity.z).magnitude;
-
-            if (currentHorizontalSpeed > 0.1f)
-                _slideDirection = currentVelocity.normalized;
-            else
-                _slideDirection = Motor.CharacterForward;
-
-            // MOMENTUM BOOST: If speed is below threshold, boost to threshold
-            if (currentHorizontalSpeed < slideMinMomentumThreshold)
-            {
-                _hasSlideBoost = true;
-                _slideMomentumBoostTimer = 0f;
-
-                // Apply immediate velocity boost to horizontal components only
-                Vector3 horizontalDir = new Vector3(_slideDirection.x, 0f, _slideDirection.z).normalized;
-                float boostAmount = slideMinMomentumThreshold - currentHorizontalSpeed;
-                _internalVelocityAdd = horizontalDir * boostAmount;
-            }
-            else
-            {
-                // No boost needed
-                _hasSlideBoost = false;
-            }
-
-            _slideSpeed = currentHorizontalSpeed;
+            TransitionToState(CharacterState.Sliding);
         }
 
         private void StopSlide()
         {
-            CurrentCharacterState = CharacterState.Default;
-
-            // Don't add extra momentum when exiting slide - just keep what we have
-            _hasSlideBoost = false;
+            TransitionToState(CharacterState.Default);
         }
 
     }

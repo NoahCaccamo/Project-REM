@@ -217,6 +217,7 @@ namespace KinematicCharacterController.Examples
             {
                 return;
             }
+            Debug.Log("Transitioning from " + CurrentCharacterState + " to " + newState);
             CharacterState tmpInitialState = CurrentCharacterState;
             OnStateExit(tmpInitialState, newState);
             CurrentCharacterState = newState;
@@ -272,7 +273,7 @@ namespace KinematicCharacterController.Examples
                     }
                 case CharacterState.Sliding:
                     {
-                        _slideMomentumBoostTimer = 0f;
+                        _slideTimer = slideMaxTimer;
                         Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                         if (horizontalVel.magnitude > 0.1f)
                         {
