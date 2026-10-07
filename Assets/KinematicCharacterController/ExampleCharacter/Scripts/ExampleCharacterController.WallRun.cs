@@ -6,7 +6,7 @@ namespace KinematicCharacterController.Examples
     {
         [Header("Wall Running")]
         public bool EnableWallRunning = true;
-        public float WallRunSpeed = 12f;
+        public float WallRunSpeed = 16.5f;
         public float WallRunMaxDuration = 2f;
         public float WallRunGravityMultiplier = 0.2f;
         public float WallRunJumpHeight = 12f;

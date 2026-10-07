@@ -8548,7 +8548,6 @@ MonoBehaviour:
   currentSpeed: 0
   momentumDecayRate: 0.5
   maxMomentumSpeed: 25
-  speedRetentionOnLanding: 0.8
   MaxStableMoveSpeed: 10
   StableMovementSharpness: 15
   OrientationSharpness: 20
@@ -8560,9 +8559,13 @@ MonoBehaviour:
   AllowJumpingWhenSliding: 1
   JumpUpSpeed: 13
   JumpScalableForwardSpeed: 0
-  JumpPreGroundingGraceTime: 0.1
-  JumpPostGroundingGraceTime: 0.1
+  JumpPreGroundingGraceTime: 0.15
+  JumpPostGroundingGraceTime: 0.15
   PreserveHorizontalMomentumOnJump: 1
+  BhopPerfectWindow: 0.03
+  BhopTotalWindow: 0.15
+  BhopSlideBonusSpeed: 1
+  BhopStandBonusSpeed: 0.5
   EnableBounce: 1
   BounceSpeed: 15
   BounceSpeedMultiplier: 0.51
@@ -8591,7 +8594,7 @@ MonoBehaviour:
   MeshRoot: {fileID: 6510422302040278518}
   CameraFollowPoint: {fileID: 6505238199867825826}
   CrouchedCapsuleHeight: 1
-  walkSpeed: 5
+  crawlSpeed: 5
   sprintSpeed: 13
   DashForce: 20
   DashCooldown: 0.3
@@ -8623,7 +8626,7 @@ MonoBehaviour:
   slideEndStopSpeed: 0.5
   speedDisplay: {fileID: 0}
   EnableWallRunning: 1
-  WallRunSpeed: 12
+  WallRunSpeed: 16.5
   WallRunMaxDuration: 2
   WallRunGravityMultiplier: 0.2
   WallRunJumpHeight: 12

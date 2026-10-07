@@ -62,10 +62,9 @@ namespace KinematicCharacterController.Examples
         public float currentSpeed;
         public float momentumDecayRate = 0.5f;
         public float maxMomentumSpeed = 25f;
-        public float speedRetentionOnLanding = 0.8f;
 
         [Header("Stable Movement")]
-        public float MaxStableMoveSpeed = 10f;
+        public float MaxStableMoveSpeed = 10f; // Depricated
         public float StableMovementSharpness = 15f;
         public float OrientationSharpness = 10f;
         public OrientationMethod OrientationMethod = OrientationMethod.TowardsCamera;
@@ -80,9 +79,20 @@ namespace KinematicCharacterController.Examples
         public bool AllowJumpingWhenSliding = false;
         public float JumpUpSpeed = 10f;
         public float JumpScalableForwardSpeed = 10f;
-        public float JumpPreGroundingGraceTime = 0f;
-        public float JumpPostGroundingGraceTime = 0f;
+        [Tooltip("Input buffer window, in seconds. If jump is pressed up to this long before landing/touching a wall, the jump will still fire the moment it becomes possible.")]
+        public float JumpPreGroundingGraceTime = 0.15f;
+        public float JumpPostGroundingGraceTime = 0.15f;
         public bool PreserveHorizontalMomentumOnJump = true;
+
+        [Header("Bhop Timing")]
+        [Tooltip("Window after landing, in seconds, during which a jump counts as a 'perfect' bhop and grants the full speed bonus.")]
+        public float BhopPerfectWindow = 0.03f;
+        [Tooltip("Total window after landing, in seconds, during which a jump still grants a scaled-down bhop speed bonus. Should stay short to keep the timing tight.")]
+        public float BhopTotalWindow = 0.15f;
+        [Tooltip("Speed bonus (m/s) granted for a perfectly-timed bhop while sliding.")]
+        public float BhopSlideBonusSpeed = 1f;
+        [Tooltip("Speed bonus (m/s) granted for a perfectly-timed bhop while standing.")]
+        public float BhopStandBonusSpeed = 0.5f;
 
         [Header("Bounce")]
         public bool EnableBounce = true;
@@ -142,6 +152,10 @@ namespace KinematicCharacterController.Examples
         private bool _isBouncing = false;
         private float _normalAirAcceleration;
 
+        // Bhop timing window: tracks when the player last landed and whether they were sliding
+        private float _timeSinceLastLanding = Mathf.Infinity;
+        private bool _wasSlidingOnLanding = false;
+
         private Vector3 lastInnerNormal = Vector3.zero;
         private Vector3 lastOuterNormal = Vector3.zero;
 
@@ -190,8 +204,8 @@ namespace KinematicCharacterController.Examples
         }
 
 
-       // Should this be moved to the momentum tank system/Dash class?
-       // keep the hook but make it call a seperate function
+        // Should this be moved to the momentum tank system/Dash class?
+        // keep the hook but make it call a seperate function
         /// <summary>
         /// Called whenever a hand successfully grabs onto something.
         /// Resets the momentum tank's decay grace window and replenishes a dash charge.
@@ -283,6 +297,11 @@ namespace KinematicCharacterController.Examples
                         {
                             _slideDirection = Motor.CharacterForward;
                         }
+
+                        // Initialize persistent forward slide speed from actual entry speed. This is the
+                        // only place (besides HandleSliding's own accel/decel) that _forwardSlideSpeed is
+                        // set - it must not be re-derived from velocity magnitude every frame afterwards.
+                        _forwardSlideSpeed = horizontalVel.magnitude;
                         break;
                     }
             }
@@ -580,7 +599,7 @@ namespace KinematicCharacterController.Examples
                         break;
                     }
 
-                    // this used to have drifting and climbing in the same line - recheck if things are funky
+                // this used to have drifting and climbing in the same line - recheck if things are funky
                 case CharacterState.Climbing:
                     {
                         // Change move input to be where youre looking
@@ -862,11 +881,11 @@ namespace KinematicCharacterController.Examples
                     }
 
 
-        /// <summary>
-        /// (Called by KinematicCharacterMotor during its update cycle)
-        /// This is where you tell your character what its velocity should be right now. 
-        /// This is the ONLY place where you can set the character's velocity
-        /// </summary>
+                /// <summary>
+                /// (Called by KinematicCharacterMotor during its update cycle)
+                /// This is where you tell your character what its velocity should be right now. 
+                /// This is the ONLY place where you can set the character's velocity
+                /// </summary>
                 case CharacterState.Sliding:
                     {
                         if (_lookInputVector.sqrMagnitude > 0f && OrientationSharpness > 0f)
@@ -878,8 +897,37 @@ namespace KinematicCharacterController.Examples
             }
         }
 
-        [SerializeField] private float walkSpeed = 5f;
-        [SerializeField] private float sprintSpeed = 8f;
+        [SerializeField] private float crawlSpeed = 5f;
+        [SerializeField] private float sprintSpeed = 13f;
+
+        /// <summary>
+        /// Computes the bhop speed bonus for a jump currently being executed, based on how much
+        /// time has passed since the player last landed. Returns 0 if outside the bhop window.
+        /// </summary>
+        private float GetBhopBonusSpeed(bool isSliding)
+        {
+            if (_timeSinceLastLanding > BhopTotalWindow)
+            {
+                return 0f;
+            }
+
+            float fullBonus = isSliding ? BhopSlideBonusSpeed : BhopStandBonusSpeed;
+
+            if (_timeSinceLastLanding <= BhopPerfectWindow)
+            {
+                return fullBonus;
+            }
+
+            // Scale down linearly from the perfect window to the end of the total window
+            float remainingWindow = BhopTotalWindow - BhopPerfectWindow;
+            if (remainingWindow <= 0f)
+            {
+                return 0f;
+            }
+
+            float t = (_timeSinceLastLanding - BhopPerfectWindow) / remainingWindow;
+            return Mathf.Lerp(fullBonus, 0f, Mathf.Clamp01(t));
+        }
 
         public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)
         {
@@ -900,7 +948,15 @@ namespace KinematicCharacterController.Examples
                             _isDashing = false;
                             Debug.Log("Dash ended");
                         }
-                        if (Motor.GroundingStatus.IsStableOnGround)
+                        // Skip grounded movement smoothing on the exact frame we land: Motor.GroundingStatus
+                        // is updated during ground probing (in UpdatePhase1/BeforeCharacterUpdate) BEFORE
+                        // UpdateVelocity runs, but our own state transition (e.g. into Sliding via StartSlide())
+                        // only happens on the NEXT frame's BeforeCharacterUpdate. Without this check, a landing
+                        // player is grounded-but-still-in-Default for exactly one frame, during which this Lerp
+                        // silently bled off 2-3 m/s of landing speed towards crawlSpeed/sprintSpeed before the
+                        // slide (or bhop) logic ever got a chance to preserve it.
+                        bool justLanded = Motor.GroundingStatus.IsStableOnGround && !Motor.LastGroundingStatus.IsStableOnGround;
+                        if (Motor.GroundingStatus.IsStableOnGround && !justLanded)
                         {
                             float currentVelocityMagnitude = currentVelocity.magnitude;
 
@@ -913,7 +969,7 @@ namespace KinematicCharacterController.Examples
                             Vector3 inputRight = Vector3.Cross(_moveInputVector, Motor.CharacterUp);
                             Vector3 reorientedInput = Vector3.Cross(effectiveGroundNormal, inputRight).normalized * _moveInputVector.magnitude;
 
-                            float speed = _sprintPressed ? walkSpeed : sprintSpeed;
+                            float speed = _sprintPressed ? crawlSpeed : sprintSpeed;
 
                             // Dynamic FOV based on actual speed for visual feedback
                             float targetFOV = 75f + Mathf.Clamp((currentSpeed - 5f) * 2f, 0f, 20f);
@@ -925,39 +981,70 @@ namespace KinematicCharacterController.Examples
                             // this will depricate maxstablemovespeed
                             //Vector3 targetMovementVelocity = reorientedInput * MaxStableMoveSpeed;
 
-                            // Smooth movement Velocity
-                            currentVelocity = Vector3.Lerp(currentVelocity, targetMovementVelocity, 1f - Mathf.Exp(-StableMovementSharpness * deltaTime));
+                            // Default running momentum: if we're under sprint speed, accelerate normally
+                            // towards it via the existing Lerp. If we're ABOVE sprint speed (e.g. carrying
+                            // momentum in from a slide/bhop/wall-run) AND the player is still holding input,
+                            // don't snap it down - instead let it decay slowly over time at momentumDecayRate.
+                            // With NO input held, fall back to the original fast-stop Lerp so releasing
+                            // input still rapidly kills speed instead of sliding forever.
+                            float currentSpeedMagnitude = currentVelocity.magnitude;
+                            bool hasInput = _moveInputVector.sqrMagnitude > 0f;
+
+                            if (currentSpeedMagnitude > speed && hasInput)
+                            {
+                                // Steer the excess-speed velocity towards the input direction without
+                                // touching its magnitude here.
+                                Vector3 steeredVelocity = Vector3.Slerp(
+                                    currentVelocity.normalized,
+                                    reorientedInput.normalized,
+                                    1f - Mathf.Exp(-StableMovementSharpness * deltaTime)) * currentSpeedMagnitude;
+
+                                // Decay the excess speed above sprint speed slowly, never dropping below it.
+                                float newSpeedMagnitude = Mathf.Max(speed, currentSpeedMagnitude - (momentumDecayRate * deltaTime));
+
+                                currentVelocity = steeredVelocity.normalized * newSpeedMagnitude;
+                            }
+                            else
+                            {
+                                // No input (or already at/under sprint speed): behave as before - rapidly
+                                // lerp towards targetMovementVelocity, which is zero when there's no input,
+                                // giving the fast stop-on-release behavior.
+                                currentVelocity = Vector3.Lerp(currentVelocity, targetMovementVelocity, 1f - Mathf.Exp(-StableMovementSharpness * deltaTime));
+                            }
+                        }
+                        else if (justLanded)
+                        {
+                            // Just landed: preserve full velocity untouched this frame. Still reorient it flat
+                            // onto the ground plane so it doesn't carry a stray vertical component into next
+                            // frame's slide/ground logic.
+                            currentVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.GroundingStatus.GroundNormal);
                         }
                         // Air movement
-                        else
+                        else if (!Motor.GroundingStatus.IsStableOnGround)
                         {
                             // Use modified air acceleration if bouncing
                             float currentAirAcceleration = _isBouncing
                                 ? _normalAirAcceleration * BounceAirAccelerationMultiplier
                                 : AirAccelerationSpeed;
 
-                            // Enhanced air strafing
+                            // Titanfall-style air strafing:
+                            // Input never adds drag, and can only redirect existing momentum - it must never
+                            // increase total horizontal speed beyond what the player already had (or base move
+                            // speed, whichever is higher). This prevents speed gain from turning/strafing alone.
                             if (_moveInputVector.sqrMagnitude > 0f)
                             {
-                                Vector3 addedVelocity = _moveInputVector * currentAirAcceleration * AirStrafeMultiplier * deltaTime;
-
+                                Vector3 wishDir = _moveInputVector.normalized;
                                 Vector3 currentVelocityOnInputsPlane = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+                                float currentHorizontalSpeed = currentVelocityOnInputsPlane.magnitude;
 
-                                // Limit air velocity from inputs
-                                if (currentVelocityOnInputsPlane.magnitude < MaxAirMoveSpeed)
-                                {
-                                    // clamp addedVel to make total vel not exceed max vel on inputs plane
-                                    Vector3 newTotal = Vector3.ClampMagnitude(currentVelocityOnInputsPlane + addedVelocity, MaxAirMoveSpeed);
-                                    addedVelocity = newTotal - currentVelocityOnInputsPlane;
-                                }
-                                else
-                                {
-                                    // Make sure added vel doesn't go in the direction of the already-exceeding velocity
-                                    if (Vector3.Dot(currentVelocityOnInputsPlane, addedVelocity) > 0f)
-                                    {
-                                        addedVelocity = Vector3.ProjectOnPlane(addedVelocity, currentVelocityOnInputsPlane.normalized);
-                                    }
-                                }
+                                // How fast are we currently moving in the wish direction?
+                                float currentSpeedInWishDir = Vector3.Dot(currentVelocityOnInputsPlane, wishDir);
+
+                                // Only accelerate towards base move speed, never beyond it, and never reduce
+                                // speed we already have in that direction (addSpeed clamped at 0+).
+                                float addSpeed = Mathf.Clamp(sprintSpeed - currentSpeedInWishDir, 0f, currentAirAcceleration * deltaTime);
+
+                                Vector3 addedVelocity = wishDir * addSpeed;
 
                                 // Prevent air-climbing sloped walls
                                 if (Motor.GroundingStatus.FoundAnyGround)
@@ -969,6 +1056,20 @@ namespace KinematicCharacterController.Examples
                                     }
                                 }
 
+
+                                Vector3 newVelocityOnPlane = currentVelocityOnInputsPlane + addedVelocity;
+
+                                // Never allow this to increase total horizontal speed beyond what was already
+                                // present (or base move speed if slower). This is what stops speed gain from
+                                // simply turning/strafing or tapping A/D while already moving fast.
+                                float speedCap = Mathf.Max(currentHorizontalSpeed, sprintSpeed);
+                                if (newVelocityOnPlane.magnitude > speedCap)
+                                {
+                                    newVelocityOnPlane = newVelocityOnPlane.normalized * speedCap;
+                                }
+
+                                addedVelocity = newVelocityOnPlane - currentVelocityOnInputsPlane;
+
                                 // Apply added velocity
                                 currentVelocity += addedVelocity;
                             }
@@ -976,13 +1077,26 @@ namespace KinematicCharacterController.Examples
                             // Gravity
                             currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
 
-                            // Drag
-                            currentVelocity *= (1f / (1f + (Drag * deltaTime)));
+                            // No drag in air: existing horizontal momentum is fully preserved
                         }
+
 
                         // Handle jumping with CONSISTENT HEIGHT
                         _jumpedThisFrame = false;
                         _timeSinceJumpRequested += deltaTime;
+
+                        // Reset _jumpConsumed as soon as we detect we're grounded THIS frame, rather than
+                        // waiting for AfterCharacterUpdate (which runs after this whole UpdateVelocity call).
+                        // Without this, a buffered jump landed on the exact landing frame would be rejected
+                        // here (since _jumpConsumed was still true from the previous jump), silently pushing
+                        // the actual jump to the NEXT frame - by which point the grounded movement branch's
+                        // speed-steering/decay logic has already run once on the landing velocity, causing
+                        // a visible dip in speed before the bhop bonus got applied back.
+                        if (!_jumpedThisFrame && (AllowJumpingWhenSliding ? Motor.GroundingStatus.FoundAnyGround : Motor.GroundingStatus.IsStableOnGround))
+                        {
+                            _jumpConsumed = false;
+                        }
+
                         if (_jumpRequested)
                         {
                             // See if we actually are allowed to jump
@@ -1002,14 +1116,34 @@ namespace KinematicCharacterController.Examples
                                 // CONSISTENT JUMP HEIGHT: Zero out vertical component, preserve horizontal
                                 Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
 
+                                // BHOP: Apply a speed bonus in the direction of current horizontal movement if jumping within the landing window
+                                float bhopBonus = GetBhopBonusSpeed(isSliding: _isCrouching || _shouldBeCrouching);
+                                if (bhopBonus > 0f)
+                                {
+                                    Vector3 bhopDirection = horizontalVelocity.sqrMagnitude > 0.0001f ? horizontalVelocity.normalized : Motor.CharacterForward;
+                                    horizontalVelocity += bhopDirection * bhopBonus;
+                                    _timeSinceLastLanding = Mathf.Infinity; // Prevent re-triggering on subsequent jumps before landing again
+                                }
+
                                 // Set new velocity: preserved horizontal + FIXED vertical jump speed
                                 currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
+
+                                // A buffered jump can now fire on the SAME frame OnLanded() ran. OnLanded()
+                                // may have already queued a landing bounce into _internalVelocityAdd (since
+                                // EnableBounce + _jumpHeld was true at the moment of landing). If we don't
+                                // cancel it here, the "additive velocity" block further below will add the
+                                // full bounce velocity ON TOP of this jump's velocity later this same frame,
+                                // stacking two vertical boosts and launching the player extremely high.
+                                // A buffered jump should simply take priority over a same-frame bounce.
+                                _internalVelocityAdd = Vector3.zero;
+                                _isBouncing = false;
 
                                 _jumpRequested = false;
                                 _jumpConsumed = true;
                                 _jumpedThisFrame = true;
                             }
                         }
+
 
                         // Take into account additive velocity
                         if (_internalVelocityAdd.sqrMagnitude > 0f)
@@ -1048,8 +1182,17 @@ namespace KinematicCharacterController.Examples
                                 // If this line weren't here, the character would remain snapped to the ground when trying to jump. Try commenting this line out and see.
                                 Motor.ForceUnground();
 
-                                // SLIDE JUMP: Preserve horizontal momentum, CONSISTENT vertical jump (NO BOOST)
+                                // SLIDE JUMP: Preserve horizontal momentum, CONSISTENT vertical jump
                                 Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+
+                                // BHOP: Apply a speed bonus in the direction of current horizontal movement if jumping within the landing window
+                                float bhopBonus = GetBhopBonusSpeed(isSliding: true);
+                                if (bhopBonus > 0f)
+                                {
+                                    Vector3 bhopDirection = horizontalVelocity.sqrMagnitude > 0.0001f ? horizontalVelocity.normalized : Motor.CharacterForward;
+                                    horizontalVelocity += bhopDirection * bhopBonus;
+                                    _timeSinceLastLanding = Mathf.Infinity; // Prevent re-triggering on subsequent jumps before landing again
+                                }
 
                                 // Set velocity: preserved horizontal + FIXED vertical (consistent height)
                                 currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
@@ -1155,18 +1298,24 @@ namespace KinematicCharacterController.Examples
         /// </summary>
         public void AfterCharacterUpdate(float deltaTime)
         {
+            // Tick the bhop landing window timer
+            _timeSinceLastLanding += deltaTime;
+
+            // Handle jump input buffer expiry. This must run every frame regardless of character
+            // state so a buffered jump (e.g. pressed just before landing, or just before touching
+            // a wall while sliding/wall-running) reliably expires after JumpPreGroundingGraceTime,
+            // instead of only being checked while in the Default state.
+            if (_jumpRequested && _timeSinceJumpRequested > JumpPreGroundingGraceTime)
+            {
+                _jumpRequested = false;
+            }
+
             switch (CurrentCharacterState)
             {
                 case CharacterState.Default:
                     {
                         // Handle jump-related values
                         {
-                            // Handle jumping pre-ground grace period
-                            if (_jumpRequested && _timeSinceJumpRequested > JumpPreGroundingGraceTime)
-                            {
-                                _jumpRequested = false;
-                            }
-
                             if (AllowJumpingWhenSliding ? Motor.GroundingStatus.FoundAnyGround : Motor.GroundingStatus.IsStableOnGround)
                             {
                                 // If we're on a ground surface, reset jumping values
@@ -1241,6 +1390,7 @@ namespace KinematicCharacterController.Examples
             }
         }
 
+
         public void PostGroundingUpdate(float deltaTime)
         {
             // Handle landing and leaving ground
@@ -1301,11 +1451,12 @@ namespace KinematicCharacterController.Examples
 
         protected void OnLanded()
         {
-            // MOMENTUM PRESERVATION ON LANDING
             _isDashing = false;
 
-            Vector3 horizontalVelocity = new Vector3(_velocityBeforeLanding.x, 0f, _velocityBeforeLanding.z);
-            float landingSpeed = horizontalVelocity.magnitude;
+            // BHOP WINDOW: Start the tight timing window for a speed-gaining jump.
+            // No speed is gained automatically on landing anymore - it's entirely up to jump timing.
+            _timeSinceLastLanding = 0f;
+            _wasSlidingOnLanding = CurrentCharacterState == CharacterState.Sliding;
 
             // Check if player should bounce on landing
             if (EnableBounce && _jumpHeld && !Motor.LastGroundingStatus.IsStableOnGround)
@@ -1346,17 +1497,9 @@ namespace KinematicCharacterController.Examples
             }
             else
             {
-                // MOMENTUM LANDING: Preserve horizontal speed for flow
-                if (landingSpeed > sprintSpeed)
-                {
-                    _internalVelocityAdd = horizontalVelocity * speedRetentionOnLanding;
-                }
-
                 _isBouncing = false;
             }
         }
-
-        // Add these new methods after OnLanded (around line 1775):
 
         protected void OnLeaveStableGround()
         {
