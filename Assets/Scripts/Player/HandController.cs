@@ -31,6 +31,10 @@ public class HandController : MonoBehaviour
         grabBlend = Mathf.MoveTowards(grabBlend, isGrabbing ? 1f : 0f, Time.deltaTime * transitionSpeed);
 
         Vector3 targetPos = Vector3.Lerp(cameraAnchor.position, worldTarget, grabBlend);
+        if (isGrabbing)
+        {
+            targetPos = worldTarget;
+        }
         // Quaternion targetRot = Quaternion.Slerp(cameraAnchor.rotation, worldTarget.rotation, grabBlend);
 
         transform.position = targetPos;
