@@ -4463,7 +4463,6 @@ MonoBehaviour:
     rotationY: 250
     shadowType: 2
     shadowStrength: 1
-    environmentIntensityMultiplier: 1
   nightSettings:
     color: {r: 0.5254902, g: 0.654902, b: 1, a: 1}
     intensity: 0.68
@@ -4471,7 +4470,6 @@ MonoBehaviour:
     rotationY: 250
     shadowType: 2
     shadowStrength: 1
-    environmentIntensityMultiplier: 1
   lightGroups:
   - groupName: 
     lights: []
@@ -8676,6 +8674,9 @@ MonoBehaviour:
   momentumDecayRate: 0.5
   maxMomentumSpeed: 25
   StableMovementSharpness: 15
+  WalkFriction: 8
+  WalkStopSpeed: 2
+  WalkAcceleration: 10
   OrientationSharpness: 20
   OrientationMethod: 0
   AirAccelerationSpeed: 22
@@ -8694,6 +8695,8 @@ MonoBehaviour:
   BhopTotalWindow: 0.15
   BhopSlideBonusSpeed: 1
   BhopStandBonusSpeed: 0.5
+  BhopFailSpeedFactor: 0.95
+  BhopFailRetention: 0.5
   EnableBounce: 1
   BounceSpeed: 15
   BounceSpeedMultiplier: 0.51
@@ -8744,7 +8747,7 @@ MonoBehaviour:
   BigMomentumLossThreshold: 10
   MinSpeedThresholdForMomentumLoss: 10
   slideBaseSpeed: 16
-  slideDecelRate: 4
+  slideFriction: 0.25
   minSlideAngle: 0
   slideSteeringSharpness: 8
   slideStrafeSpeed: 6
@@ -8760,11 +8763,18 @@ MonoBehaviour:
   WallRunJumpHeight: 12
   WallRunJumpAwayForce: 8
   WallRunJumpMomentumBoost: 1.15
-  WallRunDetectionDistance: 0.6
+  WallRunDetectionDistance: 1
   MinSpeedForWallRun: 5
   WallRunCameraTilt: 15
   CameraTiltSpeed: 8
   WallRunSpeedDecay: 0.95
+  WallRunDetectionFanAngle: 55
+  WallRunDetectionRays: 5
+  WallRunMaxEntryAngle: 65
+  WallRunMaxDetectionReach: 20.5
+  WallRunCameraAlign: 1
+  WallRunCameraAlignSpeed: 25
+  WallRunCameraAlignDeadzone: 3
 --- !u!114 &6615662580611611646
 MonoBehaviour:
   m_ObjectHideFlags: 0

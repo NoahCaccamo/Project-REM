@@ -84,6 +84,14 @@ namespace KinematicCharacterController.Examples
             _currentFollowPosition = FollowTransform.position;
         }
 
+        // Adds horizontal-only rotation (degrees) on top of player input
+        public void AddYaw(float degrees)
+        {
+            if (FollowTransform == null || Mathf.Approximately(degrees, 0f)) return;
+            PlanarDirection = Quaternion.AngleAxis(degrees, FollowTransform.up) * PlanarDirection;
+            PlanarDirection = Vector3.ProjectOnPlane(PlanarDirection, FollowTransform.up).normalized;
+        }
+
         public void UpdateWithInput(float deltaTime, float zoomInput, Vector3 rotationInput)
         {
             if (FollowTransform)
