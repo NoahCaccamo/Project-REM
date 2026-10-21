@@ -59,28 +59,47 @@ namespace KinematicCharacterController.Examples
         public HandController RightHandController;
 
         [Header("Momentum System")]
+        [Tooltip("Current horizontal speed in m/s. Display only: it is written by the HUD update and does not drive movement.")]
         public float currentSpeed;
+        [Tooltip("How fast (m/s per second) grounded horizontal speed above sprint speed bleeds off while movement input is held. Releasing input still stops the player quickly.")]
         public float momentumDecayRate = 0.5f;
         public float maxMomentumSpeed = 25f;
 
         [Header("Stable Movement")]
-        public float MaxStableMoveSpeed = 10f; // Depricated
+        // public float MaxStableMoveSpeed = 10f; // Depricated
+        [Tooltip("How quickly ground velocity moves towards the target (sprint/crawl speed, or zero with no input). Higher = snappier acceleration and stopping. Also sets how fast ground steering turns while above sprint speed.")]
         public float StableMovementSharpness = 15f;
+        [Tooltip("How quickly the character model rotates to face the look direction. Higher = snappier.")]
         public float OrientationSharpness = 10f;
         public OrientationMethod OrientationMethod = OrientationMethod.TowardsCamera;
 
         [Header("Air Movement")]
-        public float MaxAirMoveSpeed = 15f;
+        // public float MaxAirMoveSpeed = 15f; //DEPRICATED
+        [Tooltip("Air control strength in m/s^2. Below sprint speed it accelerates you towards sprint speed. Above sprint speed it sets how fast input can turn (redirect) your momentum without adding speed.")]
         public float AirAccelerationSpeed = 15f;
-        public float AirStrafeMultiplier = 1.5f;
+        // public float AirStrafeMultiplier = 1.5f; // DEPRICATED?
+        [Tooltip("Legacy air drag. Air movement currently applies no drag, so horizontal momentum is fully preserved.")] // used in climbing??
         public float Drag = 0.1f;
+        [Tooltip("While crouching in the air, holding A/D steers the travel direction towards this many degrees left/right of the view direction.")]
+        [Range(0f, 90f)] public float CrouchAirMaxAngle = 30f;
+        [Tooltip("Top speed (degrees per second) the travel direction can rotate at while crouched in the air.")]
+        public float CrouchAirMaxTurnRate = 300f;
+        [Tooltip("How fast (degrees per second^2) the turn speed ramps up and down. Lower = floatier/slower to start, stop and reverse.")]
+        public float CrouchAirTurnAcceleration = 1200f;
+        [Tooltip("How strongly the turn speed is pulled towards the target angle. Higher = holds full speed until closer to the target, lower = starts easing off earlier.")]
+        public float CrouchAirTurnGain = 8f;
+
+        private float _airCrouchTurnVelocity = 0f;
 
         [Header("Jumping")]
+        [Tooltip("If true, jumping is allowed on any detected ground, including slopes too steep to stand on. If false, only stable ground allows jumping.")]
         public bool AllowJumpingWhenSliding = false;
         public float JumpUpSpeed = 10f;
+        [Tooltip("Horizontal speed applied in the input direction when jumping off a climb.")]
         public float JumpScalableForwardSpeed = 10f;
         [Tooltip("Input buffer window, in seconds. If jump is pressed up to this long before landing/touching a wall, the jump will still fire the moment it becomes possible.")]
         public float JumpPreGroundingGraceTime = 0.15f;
+        [Tooltip("Coyote time, in seconds. A jump is still allowed this long after leaving the ground.")]
         public float JumpPostGroundingGraceTime = 0.15f;
         public bool PreserveHorizontalMomentumOnJump = true;
 
@@ -97,10 +116,12 @@ namespace KinematicCharacterController.Examples
         [Header("Bounce")]
         public bool EnableBounce = true;
         public float BounceSpeed = 15f;
+        [Tooltip("Scales the speed you hit the surface at into the bounce speed. 1.2 = bounce at 120% of impact speed (before min/max clamping).")]
         public float BounceSpeedMultiplier = 1.2f;
         public float MinBounceSpeed = 10f;
         public float MaxBounceSpeed = 30f;
         public float BounceAirAccelerationMultiplier = 0.3f;
+        [Tooltip("Fraction (0-1) of the pre-landing speed along the surface that is kept in the bounce. 0 = straight up, 1 = keep all sideways speed.")]
         public float BounceVelocityRedirection = 0.5f;
 
         public bool _hasMovedWhileClimbing = false;
