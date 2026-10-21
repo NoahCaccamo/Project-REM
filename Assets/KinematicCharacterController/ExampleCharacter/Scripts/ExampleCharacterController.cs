@@ -89,7 +89,10 @@ namespace KinematicCharacterController.Examples
         [Tooltip("How strongly the turn speed is pulled towards the target angle. Higher = holds full speed until closer to the target, lower = starts easing off earlier.")]
         public float CrouchAirTurnGain = 8f;
 
-        private float _airCrouchTurnVelocity = 0f;
+        // Crouched air strafe offset (degrees, + = right) layered on top of the camera-driven steering,
+        // and the speed (degrees per second) that offset is currently changing at.
+        private float _airStrafeAngle = 0f;
+        private float _airStrafeVelocity = 0f;
 
         [Header("Jumping")]
         [Tooltip("If true, jumping is allowed on any detected ground, including slopes too steep to stand on. If false, only stable ground allows jumping.")]
@@ -922,6 +925,28 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float sprintSpeed = 13f;
 
         /// <summary>
+        /// Shared air steering for both normal and crouched air movement. Never adds speed beyond sprint speed:
+        /// above it the velocity is only rotated towards targetDir (rate-limited, magnitude preserved), below it
+        /// the velocity accelerates towards sprint speed along targetDir.
+        /// </summary>
+        private Vector3 SteerAirVelocity(Vector3 velocityOnPlane, Vector3 targetDir, float airAcceleration, float deltaTime)
+        {
+            float speed = velocityOnPlane.magnitude;
+
+            if (speed > sprintSpeed)
+            {
+                float maxTurnRadians = (airAcceleration * deltaTime) / speed;
+                return Vector3.RotateTowards(velocityOnPlane, targetDir * speed, maxTurnRadians, 0f);
+            }
+
+            float speedInTargetDir = Vector3.Dot(velocityOnPlane, targetDir);
+            float addSpeed = Mathf.Clamp(sprintSpeed - speedInTargetDir, 0f, airAcceleration * deltaTime);
+            Vector3 result = velocityOnPlane + (targetDir * addSpeed);
+
+            return result.magnitude > sprintSpeed ? result.normalized * sprintSpeed : result;
+        }
+
+        /// <summary>
         /// Computes the bhop speed bonus for a jump currently being executed, based on how much
         /// time has passed since the player last landed. Returns 0 if outside the bhop window.
         /// </summary>
@@ -1052,87 +1077,64 @@ namespace KinematicCharacterController.Examples
                             float currentHorizontalSpeed = currentVelocityOnInputsPlane.magnitude;
                             Vector3 newVelocityOnPlane = currentVelocityOnInputsPlane;
 
-                            // Titanfall-style air strafing:
-                            // Input never adds drag, and can only redirect existing momentum - it must never
-                            // increase total horizontal speed beyond what the player already had (or base move
-                            // speed, whichever is higher). This prevents speed gain from turning/strafing alone.
-                            if (_moveInputVector.sqrMagnitude > 0f)
-                            {
-                                Vector3 wishDir = _moveInputVector.normalized;
+                            bool hasMoveInput = _moveInputVector.sqrMagnitude > 0f;
+                            Vector3 steerDir = Vector3.zero;
 
-                                if (currentHorizontalSpeed > sprintSpeed)
-                                {
-                                    // Above base speed: input can only REDIRECT momentum, never add to it.
-                                    float maxTurnRadians = (currentAirAcceleration * deltaTime) / currentHorizontalSpeed;
-                                    newVelocityOnPlane = Vector3.RotateTowards(
-                                        currentVelocityOnInputsPlane,
-                                        wishDir * currentHorizontalSpeed,
-                                        maxTurnRadians,
-                                        0f);
-                                }
-                                else
-                                {
-                                    // Under base speed: accelerate towards it in the wish direction, never beyond it.
-                                    float currentSpeedInWishDir = Vector3.Dot(currentVelocityOnInputsPlane, wishDir);
-                                    float addSpeed = Mathf.Clamp(sprintSpeed - currentSpeedInWishDir, 0f, currentAirAcceleration * deltaTime);
-
-                                    newVelocityOnPlane = currentVelocityOnInputsPlane + (wishDir * addSpeed);
-
-                                    // Never exceed base speed from acceleration alone
-                                    if (newVelocityOnPlane.magnitude > sprintSpeed)
-                                    {
-                                        newVelocityOnPlane = newVelocityOnPlane.normalized * sprintSpeed;
-                                    }
-                                }
-                            }
-
-                            // Crouched air steering (bhop-strafing): A/D picks a target angle left/right of the view
-                            // direction. Instead of snapping the direction towards it, the turn SPEED is itself
-                            // accelerated, so starting, stopping and reversing all have some weight to them.
-                            // Only the direction changes; speed comes from the normal air logic above, so crouching
-                            // can never add speed on its own.
                             if (Motor.LastGroundingStatus.IsStableOnGround)
                             {
-                                // Just left the ground: don't carry turn speed over from a previous airtime
-                                _airCrouchTurnVelocity = 0f;
+                                // Just left the ground: don't carry strafe state over from a previous airtime
+                                _airStrafeAngle = 0f;
+                                _airStrafeVelocity = 0f;
                             }
 
                             if (_isCrouching && currentHorizontalSpeed > 0.1f)
                             {
-                                Vector3 currentDir = currentVelocityOnInputsPlane / currentHorizontalSpeed;
-
-                                Vector3 lookDir = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
-                                lookDir = lookDir.sqrMagnitude > 0.0001f ? lookDir.normalized : currentDir;
-
+                                // Crouched: A/D drives a strafe offset angle that ramps with its own turn speed
+                                // (so starting, stopping and reversing have weight). That ramp rotates the velocity
+                                // directly, so strafing keeps its current feel.
                                 float targetAngle = Mathf.Clamp(_slideStrafeInput, -1f, 1f) * CrouchAirMaxAngle;
-                                Vector3 targetDir = Quaternion.AngleAxis(targetAngle, Motor.CharacterUp) * lookDir;
+                                float angleError = targetAngle - _airStrafeAngle;
 
-                                // Signed angle (degrees) still left to turn. Positive = turn right.
-                                float angleToTarget = Vector3.SignedAngle(currentDir, targetDir, Motor.CharacterUp);
+                                float desiredStrafeVelocity = Mathf.Clamp(angleError * CrouchAirTurnGain, -CrouchAirMaxTurnRate, CrouchAirMaxTurnRate);
+                                _airStrafeVelocity = Mathf.MoveTowards(_airStrafeVelocity, desiredStrafeVelocity, CrouchAirTurnAcceleration * deltaTime);
 
-                                // Desired turn speed is proportional to the remaining angle (so it eases off when
-                                // approaching the target), capped at the max turn rate.
-                                float desiredTurnVelocity = Mathf.Clamp(angleToTarget * CrouchAirTurnGain, -CrouchAirMaxTurnRate, CrouchAirMaxTurnRate);
-
-                                // Accelerate the actual turn speed towards the desired one. Reversing has to pass
-                                // through zero, which is what gives A -> D switches their ramp.
-                                _airCrouchTurnVelocity = Mathf.MoveTowards(_airCrouchTurnVelocity, desiredTurnVelocity, CrouchAirTurnAcceleration * deltaTime);
-
-                                // Never turn past the target in a single step
-                                float turnStep = _airCrouchTurnVelocity * deltaTime;
-                                if (Mathf.Sign(turnStep) == Mathf.Sign(angleToTarget) && Mathf.Abs(turnStep) > Mathf.Abs(angleToTarget))
+                                float strafeStep = _airStrafeVelocity * deltaTime;
+                                if (Mathf.Sign(strafeStep) == Mathf.Sign(angleError) && Mathf.Abs(strafeStep) > Mathf.Abs(angleError))
                                 {
-                                    turnStep = angleToTarget;
+                                    strafeStep = angleError;
                                 }
+                                _airStrafeAngle += strafeStep;
 
-                                float newSpeed = newVelocityOnPlane.magnitude;
-                                Vector3 newDir = Quaternion.AngleAxis(turnStep, Motor.CharacterUp) * currentDir;
-                                newVelocityOnPlane = newDir * newSpeed;
+                                newVelocityOnPlane = Quaternion.AngleAxis(strafeStep, Motor.CharacterUp) * currentVelocityOnInputsPlane;
+
+                                // Mouse steering: aim at the camera direction (plus the strafe offset) through the
+                                // SAME rate-limited steering as normal air movement, so it behaves identically.
+                                if (hasMoveInput)
+                                {
+                                    Vector3 lookDir = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
+                                    if (lookDir.sqrMagnitude > 0.0001f)
+                                    {
+                                        steerDir = Quaternion.AngleAxis(_airStrafeAngle, Motor.CharacterUp) * lookDir.normalized;
+                                    }
+                                }
                             }
                             else
                             {
-                                _airCrouchTurnVelocity = 0f;
+                                _airStrafeAngle = 0f;
+                                _airStrafeVelocity = 0f;
+
+                                // Normal: steer towards the camera-relative input direction
+                                if (hasMoveInput)
+                                {
+                                    steerDir = _moveInputVector.normalized;
+                                }
                             }
+
+                            if (steerDir.sqrMagnitude > 0f)
+                            {
+                                newVelocityOnPlane = SteerAirVelocity(newVelocityOnPlane, steerDir, currentAirAcceleration, deltaTime);
+                            }
+
                             Vector3 addedVelocity = newVelocityOnPlane - currentVelocityOnInputsPlane;
 
                             // Prevent air-climbing sloped walls
