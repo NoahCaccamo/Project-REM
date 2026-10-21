@@ -19,7 +19,8 @@ namespace KinematicCharacterController.Examples
 
         [Header("Sliding")]
         [SerializeField] private float slideBaseSpeed = 16f;
-        [SerializeField] private float slideDecelRate = 4f;
+        [Tooltip("Slide friction. While sliding faster than slideBaseSpeed, speed drops by (this x current speed) per second, never below slideBaseSpeed. Lower = longer slides at high speed.")]
+        [SerializeField] private float slideFriction = 0.25f;
         [SerializeField] private float minSlideAngle = 10f;
         [SerializeField] private float slideSteeringSharpness = 8f;
         [SerializeField] private float slideStrafeSpeed = 2f;
@@ -96,9 +97,9 @@ namespace KinematicCharacterController.Examples
             }
             else if (forwardSpeed > slideBaseSpeed)
             {
-                // Forward speed: decelerate towards base speed, never going below it.
+                // Slide friction: decay towards base speed proportionally to current speed, never going below it.
                 // Sliding downhill is treated the same as flat/horizontal sliding (no extra speed from slope).
-                forwardSpeed = Mathf.Max(slideBaseSpeed, forwardSpeed - (slideDecelRate * deltaTime));
+                forwardSpeed = Mathf.Max(slideBaseSpeed, forwardSpeed - (forwardSpeed * slideFriction * deltaTime));
             }
             else
             {

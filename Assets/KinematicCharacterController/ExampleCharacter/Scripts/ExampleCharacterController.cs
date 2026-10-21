@@ -67,8 +67,14 @@ namespace KinematicCharacterController.Examples
 
         [Header("Stable Movement")]
         // public float MaxStableMoveSpeed = 10f; // Depricated
-        [Tooltip("How quickly ground velocity moves towards the target (sprint/crawl speed, or zero with no input). Higher = snappier acceleration and stopping. Also sets how fast ground steering turns while above sprint speed.")]
+        [Tooltip("How quickly ground steering turns your direction while above sprint speed with input held. Higher = snappier.")]
         public float StableMovementSharpness = 15f;
+        [Tooltip("Walking ground friction. Each second, speed drops by (this x current speed), so higher = stops faster when you release input. Only applies when no input is held, or while below sprint speed.")]
+        public float WalkFriction = 8f;
+        [Tooltip("Below this speed (m/s), friction acts as if you were going this fast, so low speeds come to a complete stop instead of decaying forever.")]
+        public float WalkStopSpeed = 2f;
+        [Tooltip("Walking acceleration towards sprint/crawl speed. The rate is this x target speed (m/s^2). It must beat WalkFriction or you will not reach full speed.")]
+        public float WalkAcceleration = 10f;
         [Tooltip("How quickly the character model rotates to face the look direction. Higher = snappier.")]
         public float OrientationSharpness = 10f;
         public OrientationMethod OrientationMethod = OrientationMethod.TowardsCamera;
@@ -115,6 +121,15 @@ namespace KinematicCharacterController.Examples
         public float BhopSlideBonusSpeed = 1f;
         [Tooltip("Speed bonus (m/s) granted for a perfectly-timed bhop while standing.")]
         public float BhopStandBonusSpeed = 0.5f;
+        [Tooltip("Failed bhop with NO earlier successful bhop: speed is taken down to this fraction of run speed. 1 = exactly run speed, below 1 = a bit below it.")]
+        [Range(0f, 1f)] public float BhopFailSpeedFactor = 0.95f;
+        [Tooltip("Failed bhop AFTER one or more successful bhops: fraction (0-1) of the speed gained from those bhops that is kept above run speed. The kept speed then decays through normal ground friction/decay.")]
+        [Range(0f, 1f)] public float BhopFailRetention = 0.5f;
+
+        // Total speed (m/s) gained from successful bhops since the last failed bhop
+        private float _bhopBonusBank = 0f;
+        // True from landing until the player either jumps (bhop attempt) or ends up running (bhop failed)
+        private bool _bhopPending = false;
 
         [Header("Bounce")]
         public bool EnableBounce = true;
@@ -947,6 +962,46 @@ namespace KinematicCharacterController.Examples
         }
 
         /// <summary>
+        /// Source-style ground friction: speed drops proportionally to itself, with stopSpeed as a floor
+        /// on the "control" value so slow movement still comes to a complete stop.
+        /// </summary>
+        private static Vector3 ApplyGroundFriction(Vector3 velocity, float friction, float stopSpeed, float deltaTime)
+        {
+            float speed = velocity.magnitude;
+            if (speed < 0.0001f)
+            {
+                return Vector3.zero;
+            }
+
+            float control = Mathf.Max(speed, stopSpeed);
+            float newSpeed = Mathf.Max(0f, speed - (control * friction * deltaTime));
+            return velocity * (newSpeed / speed);
+        }
+
+        /// <summary>
+        /// Called when a bhop is failed (landed, didn't jump in time, and ended up running).
+        /// With no banked bhop speed, drops speed to just under run speed. With banked bhop speed, drops to
+        /// run speed plus a retained share of that bonus. Never raises speed.
+        /// </summary>
+        private Vector3 ApplyFailedBhopPenalty(Vector3 velocity, float runSpeed)
+        {
+            float targetSpeed = _bhopBonusBank > 0f
+                ? runSpeed + (_bhopBonusBank * BhopFailRetention)
+                : runSpeed * BhopFailSpeedFactor;
+
+            _bhopPending = false;
+            _bhopBonusBank = 0f;
+
+            float speed = velocity.magnitude;
+            if (speed <= targetSpeed || speed < 0.0001f)
+            {
+                return velocity;
+            }
+
+            return velocity * (targetSpeed / speed);
+        }
+
+        /// <summary>
         /// Computes the bhop speed bonus for a jump currently being executed, based on how much
         /// time has passed since the player last landed. Returns 0 if outside the bhop window.
         /// </summary>
@@ -1017,45 +1072,59 @@ namespace KinematicCharacterController.Examples
 
                             float speed = _sprintPressed ? crawlSpeed : sprintSpeed;
 
+                            // Failed bhop: landed, the bhop window expired without a jump, and we are on the ground in
+                            // the running state. If the player is sliding this state is not reached, so the check
+                            // stays pending until the slide ends and they transition to running.
+                            if (_bhopPending && _timeSinceLastLanding > BhopTotalWindow)
+                            {
+                                currentVelocity = ApplyFailedBhopPenalty(currentVelocity, speed);
+                            }
+
                             // Dynamic FOV based on actual speed for visual feedback
                             float targetFOV = 75f + Mathf.Clamp((currentSpeed - 5f) * 2f, 0f, 20f);
                             playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, Time.deltaTime * 5f);
 
-                            Vector3 targetMovementVelocity = reorientedInput * speed;
-
-                            // pre sprint
-                            // this will depricate maxstablemovespeed
-                            //Vector3 targetMovementVelocity = reorientedInput * MaxStableMoveSpeed;
-
-                            // Default running momentum: if we're under sprint speed, accelerate normally
-                            // towards it via the existing Lerp. If we're ABOVE sprint speed (e.g. carrying
-                            // momentum in from a slide/bhop/wall-run) AND the player is still holding input,
-                            // don't snap it down - instead let it decay slowly over time at momentumDecayRate.
-                            // With NO input held, fall back to the original fast-stop Lerp so releasing
-                            // input still rapidly kills speed instead of sliding forever.
-                            float currentSpeedMagnitude = currentVelocity.magnitude;
                             bool hasInput = _moveInputVector.sqrMagnitude > 0f;
+                            float currentSpeedMagnitude = currentVelocity.magnitude;
 
-                            if (currentSpeedMagnitude > speed && hasInput)
+                            if (hasInput && currentSpeedMagnitude > speed)
                             {
-                                // Steer the excess-speed velocity towards the input direction without
-                                // touching its magnitude here.
+                                // Above sprint speed with input held: no friction. Steer the direction towards
+                                // input and let the excess speed decay slowly at momentumDecayRate, never
+                                // dropping below sprint speed.
                                 Vector3 steeredVelocity = Vector3.Slerp(
                                     currentVelocity.normalized,
                                     reorientedInput.normalized,
                                     1f - Mathf.Exp(-StableMovementSharpness * deltaTime)) * currentSpeedMagnitude;
 
-                                // Decay the excess speed above sprint speed slowly, never dropping below it.
                                 float newSpeedMagnitude = Mathf.Max(speed, currentSpeedMagnitude - (momentumDecayRate * deltaTime));
 
                                 currentVelocity = steeredVelocity.normalized * newSpeedMagnitude;
                             }
                             else
                             {
-                                // No input (or already at/under sprint speed): behave as before - rapidly
-                                // lerp towards targetMovementVelocity, which is zero when there's no input,
-                                // giving the fast stop-on-release behavior.
-                                currentVelocity = Vector3.Lerp(currentVelocity, targetMovementVelocity, 1f - Mathf.Exp(-StableMovementSharpness * deltaTime));
+                                // Source-style: friction first, then accelerate towards the wish velocity.
+                                // Skip friction on a frame that is about to jump so bhopping keeps its speed.
+                                bool willJump = _jumpRequested && !_jumpConsumed;
+                                if (!willJump)
+                                {
+                                    currentVelocity = ApplyGroundFriction(currentVelocity, WalkFriction, WalkStopSpeed, deltaTime);
+                                }
+
+                                if (hasInput)
+                                {
+                                    Vector3 wishDir = reorientedInput.normalized;
+                                    float wishSpeed = speed * reorientedInput.magnitude;
+
+                                    float speedInWishDir = Vector3.Dot(currentVelocity, wishDir);
+                                    float addSpeed = wishSpeed - speedInWishDir;
+
+                                    if (addSpeed > 0f)
+                                    {
+                                        float accelSpeed = Mathf.Min(WalkAcceleration * wishSpeed * deltaTime, addSpeed);
+                                        currentVelocity += wishDir * accelSpeed;
+                                    }
+                                }
                             }
                         }
                         else if (justLanded)
@@ -1199,7 +1268,11 @@ namespace KinematicCharacterController.Examples
                                     Vector3 bhopDirection = horizontalVelocity.sqrMagnitude > 0.0001f ? horizontalVelocity.normalized : Motor.CharacterForward;
                                     horizontalVelocity += bhopDirection * bhopBonus;
                                     _timeSinceLastLanding = Mathf.Infinity; // Prevent re-triggering on subsequent jumps before landing again
+                                    _bhopBonusBank += bhopBonus;
                                 }
+
+                                // Any jump counts as a bhop attempt, so this landing can no longer be a failed bhop
+                                _bhopPending = false;
 
                                 // Set new velocity: preserved horizontal + FIXED vertical jump speed
                                 currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
@@ -1268,7 +1341,11 @@ namespace KinematicCharacterController.Examples
                                     Vector3 bhopDirection = horizontalVelocity.sqrMagnitude > 0.0001f ? horizontalVelocity.normalized : Motor.CharacterForward;
                                     horizontalVelocity += bhopDirection * bhopBonus;
                                     _timeSinceLastLanding = Mathf.Infinity; // Prevent re-triggering on subsequent jumps before landing again
+                                    _bhopBonusBank += bhopBonus;
                                 }
+
+                                // Any jump counts as a bhop attempt, so this landing can no longer be a failed bhop
+                                _bhopPending = false;
 
                                 // Set velocity: preserved horizontal + FIXED vertical (consistent height)
                                 currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
@@ -1532,6 +1609,7 @@ namespace KinematicCharacterController.Examples
             // BHOP WINDOW: Start the tight timing window for a speed-gaining jump.
             // No speed is gained automatically on landing anymore - it's entirely up to jump timing.
             _timeSinceLastLanding = 0f;
+            _bhopPending = true;
             _wasSlidingOnLanding = CurrentCharacterState == CharacterState.Sliding;
 
             // Check if player should bounce on landing
