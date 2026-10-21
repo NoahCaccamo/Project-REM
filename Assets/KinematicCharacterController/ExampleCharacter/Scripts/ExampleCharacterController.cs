@@ -1048,6 +1048,10 @@ namespace KinematicCharacterController.Examples
                                 ? _normalAirAcceleration * BounceAirAccelerationMultiplier
                                 : AirAccelerationSpeed;
 
+                            Vector3 currentVelocityOnInputsPlane = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+                            float currentHorizontalSpeed = currentVelocityOnInputsPlane.magnitude;
+                            Vector3 newVelocityOnPlane = currentVelocityOnInputsPlane;
+
                             // Titanfall-style air strafing:
                             // Input never adds drag, and can only redirect existing momentum - it must never
                             // increase total horizontal speed beyond what the player already had (or base move
@@ -1055,45 +1059,94 @@ namespace KinematicCharacterController.Examples
                             if (_moveInputVector.sqrMagnitude > 0f)
                             {
                                 Vector3 wishDir = _moveInputVector.normalized;
-                                Vector3 currentVelocityOnInputsPlane = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
-                                float currentHorizontalSpeed = currentVelocityOnInputsPlane.magnitude;
 
-                                // How fast are we currently moving in the wish direction?
-                                float currentSpeedInWishDir = Vector3.Dot(currentVelocityOnInputsPlane, wishDir);
-
-                                // Only accelerate towards base move speed, never beyond it, and never reduce
-                                // speed we already have in that direction (addSpeed clamped at 0+).
-                                float addSpeed = Mathf.Clamp(sprintSpeed - currentSpeedInWishDir, 0f, currentAirAcceleration * deltaTime);
-
-                                Vector3 addedVelocity = wishDir * addSpeed;
-
-                                // Prevent air-climbing sloped walls
-                                if (Motor.GroundingStatus.FoundAnyGround)
+                                if (currentHorizontalSpeed > sprintSpeed)
                                 {
-                                    if (Vector3.Dot(currentVelocity + addedVelocity, addedVelocity) > 0f)
+                                    // Above base speed: input can only REDIRECT momentum, never add to it.
+                                    float maxTurnRadians = (currentAirAcceleration * deltaTime) / currentHorizontalSpeed;
+                                    newVelocityOnPlane = Vector3.RotateTowards(
+                                        currentVelocityOnInputsPlane,
+                                        wishDir * currentHorizontalSpeed,
+                                        maxTurnRadians,
+                                        0f);
+                                }
+                                else
+                                {
+                                    // Under base speed: accelerate towards it in the wish direction, never beyond it.
+                                    float currentSpeedInWishDir = Vector3.Dot(currentVelocityOnInputsPlane, wishDir);
+                                    float addSpeed = Mathf.Clamp(sprintSpeed - currentSpeedInWishDir, 0f, currentAirAcceleration * deltaTime);
+
+                                    newVelocityOnPlane = currentVelocityOnInputsPlane + (wishDir * addSpeed);
+
+                                    // Never exceed base speed from acceleration alone
+                                    if (newVelocityOnPlane.magnitude > sprintSpeed)
                                     {
-                                        Vector3 perpenticularObstructionNormal = Vector3.Cross(Vector3.Cross(Motor.CharacterUp, Motor.GroundingStatus.GroundNormal), Motor.CharacterUp).normalized;
-                                        addedVelocity = Vector3.ProjectOnPlane(addedVelocity, perpenticularObstructionNormal);
+                                        newVelocityOnPlane = newVelocityOnPlane.normalized * sprintSpeed;
                                     }
                                 }
+                            }
 
+                            // Crouched air steering (bhop-strafing): A/D picks a target angle left/right of the view
+                            // direction. Instead of snapping the direction towards it, the turn SPEED is itself
+                            // accelerated, so starting, stopping and reversing all have some weight to them.
+                            // Only the direction changes; speed comes from the normal air logic above, so crouching
+                            // can never add speed on its own.
+                            if (Motor.LastGroundingStatus.IsStableOnGround)
+                            {
+                                // Just left the ground: don't carry turn speed over from a previous airtime
+                                _airCrouchTurnVelocity = 0f;
+                            }
 
-                                Vector3 newVelocityOnPlane = currentVelocityOnInputsPlane + addedVelocity;
+                            if (_isCrouching && currentHorizontalSpeed > 0.1f)
+                            {
+                                Vector3 currentDir = currentVelocityOnInputsPlane / currentHorizontalSpeed;
 
-                                // Never allow this to increase total horizontal speed beyond what was already
-                                // present (or base move speed if slower). This is what stops speed gain from
-                                // simply turning/strafing or tapping A/D while already moving fast.
-                                float speedCap = Mathf.Max(currentHorizontalSpeed, sprintSpeed);
-                                if (newVelocityOnPlane.magnitude > speedCap)
+                                Vector3 lookDir = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
+                                lookDir = lookDir.sqrMagnitude > 0.0001f ? lookDir.normalized : currentDir;
+
+                                float targetAngle = Mathf.Clamp(_slideStrafeInput, -1f, 1f) * CrouchAirMaxAngle;
+                                Vector3 targetDir = Quaternion.AngleAxis(targetAngle, Motor.CharacterUp) * lookDir;
+
+                                // Signed angle (degrees) still left to turn. Positive = turn right.
+                                float angleToTarget = Vector3.SignedAngle(currentDir, targetDir, Motor.CharacterUp);
+
+                                // Desired turn speed is proportional to the remaining angle (so it eases off when
+                                // approaching the target), capped at the max turn rate.
+                                float desiredTurnVelocity = Mathf.Clamp(angleToTarget * CrouchAirTurnGain, -CrouchAirMaxTurnRate, CrouchAirMaxTurnRate);
+
+                                // Accelerate the actual turn speed towards the desired one. Reversing has to pass
+                                // through zero, which is what gives A -> D switches their ramp.
+                                _airCrouchTurnVelocity = Mathf.MoveTowards(_airCrouchTurnVelocity, desiredTurnVelocity, CrouchAirTurnAcceleration * deltaTime);
+
+                                // Never turn past the target in a single step
+                                float turnStep = _airCrouchTurnVelocity * deltaTime;
+                                if (Mathf.Sign(turnStep) == Mathf.Sign(angleToTarget) && Mathf.Abs(turnStep) > Mathf.Abs(angleToTarget))
                                 {
-                                    newVelocityOnPlane = newVelocityOnPlane.normalized * speedCap;
+                                    turnStep = angleToTarget;
                                 }
 
-                                addedVelocity = newVelocityOnPlane - currentVelocityOnInputsPlane;
-
-                                // Apply added velocity
-                                currentVelocity += addedVelocity;
+                                float newSpeed = newVelocityOnPlane.magnitude;
+                                Vector3 newDir = Quaternion.AngleAxis(turnStep, Motor.CharacterUp) * currentDir;
+                                newVelocityOnPlane = newDir * newSpeed;
                             }
+                            else
+                            {
+                                _airCrouchTurnVelocity = 0f;
+                            }
+                            Vector3 addedVelocity = newVelocityOnPlane - currentVelocityOnInputsPlane;
+
+                            // Prevent air-climbing sloped walls
+                            if (Motor.GroundingStatus.FoundAnyGround)
+                            {
+                                if (Vector3.Dot(currentVelocity + addedVelocity, addedVelocity) > 0f)
+                                {
+                                    Vector3 perpenticularObstructionNormal = Vector3.Cross(Vector3.Cross(Motor.CharacterUp, Motor.GroundingStatus.GroundNormal), Motor.CharacterUp).normalized;
+                                    addedVelocity = Vector3.ProjectOnPlane(addedVelocity, perpenticularObstructionNormal);
+                                }
+                            }
+
+                            // Apply added velocity
+                            currentVelocity += addedVelocity;
 
                             // Gravity
                             currentVelocity += playerCharacter.CurrentStats.gravity * deltaTime;
