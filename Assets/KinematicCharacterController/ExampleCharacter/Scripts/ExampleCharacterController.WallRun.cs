@@ -40,11 +40,17 @@ namespace KinematicCharacterController.Examples
 
         [Header("Wall Run Camera Alignment")]
         public bool WallRunCameraAlign = true;
-        [Tooltip("Degrees per second the view turns toward parallel-to-wall while looking into it.")]
-        public float WallRunCameraAlignSpeed = 45f;
+        [Tooltip("Pull speed (deg/s) when looking straight into the wall (90 degrees off parallel).")]
+        public float WallRunCameraAlignMaxSpeed = 90f;
+        [Tooltip("Pull speed (deg/s) as the view nears parallel. Keeps the final approach gentle but never stalls.")]
+        public float WallRunCameraAlignMinSpeed = 8f;
+        [Tooltip("Shapes the ramp. 1 = linear in angle, higher = stays gentle longer and ramps up late.")]
+        [Range(0.5f, 4f)] public float WallRunCameraAlignCurve = 1.5f;
         [Tooltip("Stops aligning once the view is within this many degrees of parallel.")]
         public float WallRunCameraAlignDeadzone = 3f;
 
+        /// <summary>True when the camera should be lowered (crouched/crouching and on the ground).</summary>
+        public bool WantsLowCamera => (_isCrouching || _shouldBeCrouching) && Motor.GroundingStatus.IsStableOnGround;
 
         // Separate into own class later on when tilting for generic movement
         // Get movement tilt, update camera tilt, etc (functions
@@ -197,11 +203,18 @@ namespace KinematicCharacterController.Examples
                 parallel = -parallel;
 
             float angle = Vector3.SignedAngle(look, parallel, up);
-            if (Mathf.Abs(angle) <= WallRunCameraAlignDeadzone)
+            float absAngle = Mathf.Abs(angle);
+            if (absAngle <= WallRunCameraAlignDeadzone)
                 return 0f;
 
-            float step = WallRunCameraAlignSpeed * deltaTime;
-            return Mathf.Sign(angle) * Mathf.Min(Mathf.Abs(angle), step);
+            // 0 = parallel, 1 = looking straight into the wall.
+            // Speed scales up with depth, then SmoothStep eases it off over the last stretch.
+            float depth = Mathf.Clamp01(absAngle / 90f);
+            float shaped = Mathf.SmoothStep(0f, 1f, Mathf.Pow(depth, WallRunCameraAlignCurve));
+            float speed = Mathf.Lerp(WallRunCameraAlignMinSpeed, WallRunCameraAlignMaxSpeed, shaped);
+
+            float step = speed * deltaTime;
+            return Mathf.Sign(angle) * Mathf.Min(absAngle, step);
         }
 
         /// <summary>

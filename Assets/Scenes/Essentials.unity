@@ -8019,6 +8019,9 @@ MonoBehaviour:
     m_Bits: 4294967295
   ObstructionSharpness: 10000
   IgnoredColliders: []
+  CrouchCameraDrop: 0.5
+  CrouchCameraDownSharpness: 18
+  CrouchCameraUpSharpness: 12
 --- !u!124 &5543738659990719153
 Behaviour:
   m_ObjectHideFlags: 0
@@ -8773,7 +8776,9 @@ MonoBehaviour:
   WallRunMaxEntryAngle: 65
   WallRunMaxDetectionReach: 20.5
   WallRunCameraAlign: 1
-  WallRunCameraAlignSpeed: 25
+  WallRunCameraAlignMaxSpeed: 90
+  WallRunCameraAlignMinSpeed: 8
+  WallRunCameraAlignCurve: 0.6
   WallRunCameraAlignDeadzone: 3
 --- !u!114 &6615662580611611646
 MonoBehaviour:

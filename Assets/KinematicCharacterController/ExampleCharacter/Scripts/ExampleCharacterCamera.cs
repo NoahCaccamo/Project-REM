@@ -55,6 +55,17 @@ namespace KinematicCharacterController.Examples
 
         private const int MaxObstructions = 32;
 
+        [Header("Crouch")]
+        [Tooltip("How far (meters) the camera lowers while crouched on the ground.")]
+        public float CrouchCameraDrop = 0.5f;
+        [Tooltip("Lowering speed. Higher = snappier.")]
+        public float CrouchCameraDownSharpness = 18f;
+        [Tooltip("Rising speed when standing back up or leaving the ground.")]
+        public float CrouchCameraUpSharpness = 12f;
+
+        public bool CrouchCameraActive { get; set; }
+        private float _crouchOffset;
+
         void OnValidate()
         {
             DefaultDistance = Mathf.Clamp(DefaultDistance, MinDistance, MaxDistance);
@@ -181,6 +192,12 @@ namespace KinematicCharacterController.Examples
                 // Handle framing
                 targetPosition += Transform.right * FollowPointFraming.x;
                 targetPosition += Transform.up * FollowPointFraming.y;
+
+                // Smooth crouch drop (exponential, frame-rate independent)
+                float targetOffset = CrouchCameraActive ? CrouchCameraDrop : 0f;
+                float sharpness = targetOffset > _crouchOffset ? CrouchCameraDownSharpness : CrouchCameraUpSharpness;
+                _crouchOffset = Mathf.Lerp(_crouchOffset, targetOffset, 1f - Mathf.Exp(-sharpness * deltaTime));
+                targetPosition -= FollowTransform.up * _crouchOffset;
 
                 // Apply position
                 Transform.position = targetPosition;
