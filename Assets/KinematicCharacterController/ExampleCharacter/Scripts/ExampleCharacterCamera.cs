@@ -55,6 +55,17 @@ namespace KinematicCharacterController.Examples
 
         private const int MaxObstructions = 32;
 
+        [Header("Crouch")]
+        [Tooltip("How far (meters) the camera lowers while crouched on the ground.")]
+        public float CrouchCameraDrop = 0.5f;
+        [Tooltip("Lowering speed. Higher = snappier.")]
+        public float CrouchCameraDownSharpness = 18f;
+        [Tooltip("Rising speed when standing back up or leaving the ground.")]
+        public float CrouchCameraUpSharpness = 12f;
+
+        public bool CrouchCameraActive { get; set; }
+        private float _crouchOffset;
+
         void OnValidate()
         {
             DefaultDistance = Mathf.Clamp(DefaultDistance, MinDistance, MaxDistance);
@@ -82,6 +93,14 @@ namespace KinematicCharacterController.Examples
             FollowTransform = t;
             PlanarDirection = FollowTransform.forward;
             _currentFollowPosition = FollowTransform.position;
+        }
+
+        // Adds horizontal-only rotation (degrees) on top of player input
+        public void AddYaw(float degrees)
+        {
+            if (FollowTransform == null || Mathf.Approximately(degrees, 0f)) return;
+            PlanarDirection = Quaternion.AngleAxis(degrees, FollowTransform.up) * PlanarDirection;
+            PlanarDirection = Vector3.ProjectOnPlane(PlanarDirection, FollowTransform.up).normalized;
         }
 
         public void UpdateWithInput(float deltaTime, float zoomInput, Vector3 rotationInput)
@@ -173,6 +192,12 @@ namespace KinematicCharacterController.Examples
                 // Handle framing
                 targetPosition += Transform.right * FollowPointFraming.x;
                 targetPosition += Transform.up * FollowPointFraming.y;
+
+                // Smooth crouch drop (exponential, frame-rate independent)
+                float targetOffset = CrouchCameraActive ? CrouchCameraDrop : 0f;
+                float sharpness = targetOffset > _crouchOffset ? CrouchCameraDownSharpness : CrouchCameraUpSharpness;
+                _crouchOffset = Mathf.Lerp(_crouchOffset, targetOffset, 1f - Mathf.Exp(-sharpness * deltaTime));
+                targetPosition -= FollowTransform.up * _crouchOffset;
 
                 // Apply position
                 Transform.position = targetPosition;

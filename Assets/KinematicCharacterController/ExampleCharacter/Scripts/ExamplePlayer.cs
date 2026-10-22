@@ -107,6 +107,11 @@ namespace KinematicCharacterController.Examples
         scrollInput = 0f;
 #endif
 
+            // Gentle auto-yaw toward wall-parallel while wall running and looking into the wall
+            CharacterCamera.AddYaw(Character.GetWallRunCameraYaw(CharacterCamera.PlanarDirection, Time.deltaTime));
+
+            CharacterCamera.CrouchCameraActive = Character.WantsLowCamera;
+
             // Apply inputs to the camera
             CharacterCamera.UpdateWithInput(Time.deltaTime, scrollInput, lookInputVector);
 
