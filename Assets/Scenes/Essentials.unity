@@ -8019,7 +8019,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   ObstructionSharpness: 10000
   IgnoredColliders: []
-  CrouchCameraDrop: 0.5
+  CrouchCameraDrop: 0.8
   CrouchCameraDownSharpness: 18
   CrouchCameraUpSharpness: 12
 --- !u!124 &5543738659990719153
@@ -8273,7 +8273,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6508197606455033538}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -8322,7 +8322,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6508613561215324218}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
