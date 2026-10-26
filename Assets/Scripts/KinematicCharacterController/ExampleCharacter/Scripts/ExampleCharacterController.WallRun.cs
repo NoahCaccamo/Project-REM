@@ -57,6 +57,34 @@ namespace KinematicCharacterController.Examples
         [Tooltip("Fan the detection rays out from the camera's horizontal facing instead of the velocity direction.")]
         public bool WallRunRaysUseCamera = true;
 
+        [Header("Wall Run Input Rules")]
+        [Tooltip("Forward input must exceed this to enter / stay in a wall run.")]
+        public float WallRunForwardInputThreshold = 0.1f;
+        [Tooltip("Sideways input (away from the wall) above this ends the wall run.")]
+        public float WallRunAwayInputThreshold = 0.5f;
+        [Tooltip("After leaving a wall run with crouch/slide, wall running is blocked for this long (s). It is always blocked while crouch is held.")]
+        public float WallRunCrouchBlockTime = 0.25f;
+        [Tooltip("Looking more than this (dot product with the wall axis) toward the opposite direction reverses the wall run.")]
+        [Range(0.05f, 0.9f)] public float WallRunReverseLookThreshold = 0.3f;
+        [Tooltip("Speed change (m/s^2) while reversing. Decelerates through zero and accelerates to WallRunSpeed the other way.")]
+        public float WallRunReverseAcceleration = 90f;
+        [Tooltip("Window (s) after leaving a wall run without jumping in which a mid-air jump is allowed.")]
+        public float WallRunCoyoteTime = 0.15f;
+
+        private Vector3 _rawMoveInput;          // x = strafe, z = forward (NOT camera-relative)
+        private bool _crouchButtonHeld;
+        private float _wallRunBlockTimer;
+        private float _wallRunCoyoteTimer;
+        private bool _wallRunReversing;
+
+        /// <summary>Input-based requirements for starting a wall run.</summary>
+        private bool CanInitiateWallRun()
+        {
+            return _rawMoveInput.z > WallRunForwardInputThreshold
+                && !_crouchButtonHeld
+                && _wallRunBlockTimer <= 0f;
+        }
+
         /// <summary>
         /// Horizontal reference direction the detection fan is built around.
         /// Not wall running: camera facing (unaffected by capsule rotation).
@@ -282,87 +310,114 @@ namespace KinematicCharacterController.Examples
         }
 
         /// <summary>
-        /// Handles wall running physics - PRESERVES MOMENTUM, INDEPENDENT OF CAMERA
+        /// Handles wall running physics - PRESERVES MOMENTUM, direction can be reversed by looking the other way
         /// </summary>
         private void HandleWallRunning(ref Vector3 currentVelocity, float deltaTime)
         {
             _wallRunTimer += deltaTime;
+            Vector3 up = Motor.CharacterUp;
 
-            // Check if still against wall
+            // Exit: crouch / slide pressed or held (also blocks re-entry briefly)
+            if (_crouchButtonHeld)
+            {
+                _wallRunBlockTimer = WallRunCrouchBlockTime;
+                TransitionToState(CharacterState.Default);
+                return;
+            }
+
+            // Exit: forward input not held
+            if (_rawMoveInput.z <= WallRunForwardInputThreshold)
+            {
+                TransitionToState(CharacterState.Default);
+                return;
+            }
+
+            // Exit: wall lost (also covers running off the end of a wall)
             if (!DetectWallForRunning(out Vector3 currentWallNormal, out bool isLeftWall))
             {
                 TransitionToState(CharacterState.Default);
                 return;
             }
 
-            // Check duration limit
+            // Exit: duration limit
             if (_wallRunTimer >= WallRunMaxDuration)
             {
                 TransitionToState(CharacterState.Default);
                 return;
             }
 
-            // Check if player has released forward input - exit wall run if no forward input
-            Vector3 cameraPlanarDirection = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp).normalized;
-            Quaternion cameraPlanarRotation = Quaternion.LookRotation(cameraPlanarDirection, Motor.CharacterUp);
-            Vector3 rawMoveInput = _moveInputVector; // This is already set in SetInputs
+            // Camera-relative frame (input is relative to the camera)
+            Vector3 camDir = Vector3.ProjectOnPlane(playerCamera.transform.forward, up).normalized;
+            if (camDir.sqrMagnitude < 0.001f)
+            {
+                camDir = Motor.CharacterForward;
+            }
+            Vector3 camRight = Vector3.Cross(up, camDir);
 
-            // Exit wall run if player is not holding forward
-            if (rawMoveInput.sqrMagnitude < 0.1f)
+            // Update wall normal and side (wall may curve). Side is camera-relative so it matches the input.
+            _wallRunNormal = currentWallNormal;
+            _isWallRunningLeft = Vector3.Dot(-_wallRunNormal, camRight) < 0f;
+
+            // Exit: pressing away from the wall (e.g. wall on the left, press right)
+            float awayDot = Vector3.Dot(_wallRunNormal, camRight);
+            if (Mathf.Abs(awayDot) > 0.3f && _rawMoveInput.x * Mathf.Sign(awayDot) > WallRunAwayInputThreshold)
             {
                 TransitionToState(CharacterState.Default);
                 return;
             }
 
-            // Update wall normal and side (wall may curve)
-            _wallRunNormal = currentWallNormal;
-            _isWallRunningLeft = isLeftWall;
+            // Direction axis along the wall
+            Vector3 wallAxis = Vector3.Cross(_wallRunNormal, up).normalized;
+            Vector3 currentHorizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, up);
 
-            // Calculate wall run direction (forward along wall) - INDEPENDENT of camera rotation
-            Vector3 wallForward = Vector3.Cross(_wallRunNormal, Motor.CharacterUp).normalized;
-
-            // Keep running in the same direction as when we started (or current velocity direction)
-            Vector3 currentHorizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
-            if (currentHorizontalVelocity.magnitude > 0.1f)
+            // Choose direction: look direction wins when clearly pointing along one way, otherwise keep velocity direction
+            Vector3 wallForward = wallAxis;
+            float lookAlong = Vector3.Dot(wallAxis, camDir);
+            if (Mathf.Abs(lookAlong) > WallRunReverseLookThreshold)
             {
-                // Use current velocity direction to determine which way along wall to run
-                if (Vector3.Dot(wallForward, currentHorizontalVelocity.normalized) < 0f)
+                wallForward = wallAxis * Mathf.Sign(lookAlong);
+            }
+            else if (currentHorizontalVelocity.magnitude > 0.1f)
+            {
+                if (Vector3.Dot(wallAxis, currentHorizontalVelocity) < 0f) wallForward = -wallAxis;
+            }
+            else if (Vector3.Dot(wallAxis, Motor.CharacterForward) < 0f)
+            {
+                wallForward = -wallAxis;
+            }
+
+            // Start reversing when moving against the chosen direction
+            float signedSpeed = Vector3.Dot(currentHorizontalVelocity, wallForward);
+            if (signedSpeed < 0f)
+            {
+                _wallRunReversing = true;
+            }
+
+            _wallRunDirection = wallForward;
+
+            if (_wallRunReversing)
+            {
+                // Rapidly decelerate through zero and accelerate up to WallRunSpeed the other way
+                float newSpeed = Mathf.MoveTowards(signedSpeed, WallRunSpeed, WallRunReverseAcceleration * deltaTime);
+                if (newSpeed >= WallRunSpeed - 0.01f)
                 {
-                    wallForward = -wallForward;
+                    _wallRunReversing = false;
                 }
+
+                Vector3 vertical = currentVelocity - currentHorizontalVelocity;
+                currentVelocity = wallForward * newSpeed + vertical;
             }
             else
             {
-                // Fallback: use character forward
-                if (Vector3.Dot(wallForward, Motor.CharacterForward) < 0f)
-                {
-                    wallForward = -wallForward;
-                }
+                // PRESERVE MOMENTUM: use the larger of current speed or base wall run speed
+                float targetSpeed = Mathf.Max(signedSpeed, WallRunSpeed);
+                targetSpeed *= Mathf.Pow(WallRunSpeedDecay, deltaTime);
+
+                Vector3 targetVelocity = wallForward * targetSpeed;
+
+                // Smooth transition to target velocity (less aggressive to preserve momentum better)
+                currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, 1f - Mathf.Exp(-5f * deltaTime));
             }
-
-            // Update stored wall run direction
-            _wallRunDirection = wallForward;
-
-            // PRESERVE MOMENTUM: Get current speed along wall
-            float currentSpeedAlongWall = Vector3.Dot(currentHorizontalVelocity, wallForward);
-
-            // Use the maximum of current speed or base wall run speed
-            float targetSpeed = Mathf.Max(Mathf.Abs(currentSpeedAlongWall), WallRunSpeed);
-
-            // Apply slight decay over time (set WallRunSpeedDecay to 1.0 for no decay)
-            targetSpeed *= Mathf.Pow(WallRunSpeedDecay, deltaTime);
-
-            Vector3 targetVelocity = wallForward * targetSpeed;
-
-            // Allow some vertical input control
-            if (_moveInputVector.sqrMagnitude > 0f)
-            {
-                Vector3 verticalInput = Vector3.Project(_moveInputVector, Motor.CharacterUp);
-                targetVelocity += verticalInput * WallRunSpeed * 0.5f;
-            }
-
-            // Smooth transition to target velocity (less aggressive to preserve momentum better)
-            currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, 1f - Mathf.Exp(-5f * deltaTime));
 
             // Reduced gravity while wall running
             currentVelocity += playerCharacter.CurrentStats.gravity * WallRunGravityMultiplier * deltaTime;
