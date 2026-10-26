@@ -734,6 +734,8 @@ namespace KinematicCharacterController.Examples
                 Gizmos.color = Color.blue;
                 Gizmos.DrawRay(Motor.TransientPosition, _slideDirection * 2f);
             }
+
+            DrawGizmosForWallrun();
         }
 
         private void DrawCircleGizmo(Vector3 center, float radius, int segments = 32)
