@@ -30,6 +30,8 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float slideMinTimer = 1f;
         [SerializeField] private float slideEndDecelRate = 20f;
         [SerializeField] private float slideEndStopSpeed = 0.5f;
+        [Tooltip("If the real speed (after collisions) is lower than the intended slide speed by more than this (m/s), the slide speed is lowered to match it. Prevents the slide from re-accelerating after hitting a wall.")]
+        [SerializeField] private float slideCollisionSyncTolerance = 0.5f;
         private float _slideTimer = 0f;
 
         private void HandleSliding(ref Vector3 currentVelocity, float deltaTime)
@@ -79,6 +81,26 @@ namespace KinematicCharacterController.Examples
             }
 
             // THE SLIDING CHANGES MAY HAVE AFFECTED HOW BHOP MOMENTUM IS GAINED.
+
+            // Real speed along the ground, as left by the motor after last frame's movement and collisions.
+            // (_forwardSlideSpeed is only our *intended* speed, so hitting a wall doesn't change it.)
+            float actualSpeed = Vector3.ProjectOnPlane(currentVelocity, groundNormal).magnitude;
+
+            // Slowed to crawl speed (e.g. by a wall): hand over to crawling immediately, no waiting for the timer
+            if (actualSpeed <= crawlStateMaxSpeed)
+            {
+                _forwardSlideSpeed = actualSpeed;
+                StopSlide();
+                return;
+            }
+
+            // Slowed by something else (still above crawl speed): follow the real speed down instead of
+            // re-accelerating back to the old slide speed
+            if (actualSpeed < _forwardSlideSpeed - slideCollisionSyncTolerance)
+            {
+                _forwardSlideSpeed = actualSpeed;
+            }
+
 
             // Forward speed is persistent state (_forwardSlideSpeed), NOT re-derived from
             // horizontalVelocity.magnitude. currentVelocity always contains last frame's lateral

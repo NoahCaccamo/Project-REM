@@ -8760,6 +8760,7 @@ MonoBehaviour:
   slideMinTimer: 1
   slideEndDecelRate: 20
   slideEndStopSpeed: 0.5
+  slideCollisionSyncTolerance: 0.5
   speedDisplay: {fileID: 0}
   EnableWallRunning: 1
   WallRunSpeed: 16.5
@@ -8790,7 +8791,7 @@ MonoBehaviour:
   WallRunForwardInputThreshold: 0.1
   WallRunAwayInputThreshold: 0.5
   WallRunCrouchBlockTime: 0.25
-  WallRunReverseLookThreshold: 0.3
+  WallRunReverseLookThreshold: 0.4
   WallRunReverseAcceleration: 90
   WallRunCoyoteTime: 0.15
   DrawWallRunGizmos: 1
