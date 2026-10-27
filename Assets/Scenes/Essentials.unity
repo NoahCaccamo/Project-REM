@@ -8660,6 +8660,8 @@ MonoBehaviour:
   ledgeDropDistance: 2
   isGrabbingL: 0
   isGrabbingR: 0
+  crawlStateMaxSpeed: 5
+  crawlExitSpeedMargin: 0.5
   Motor: {fileID: 6615662580611611646}
   playerCamera: {fileID: 5553693056096936871}
   playerCharacter: {fileID: 0}
@@ -8754,7 +8756,7 @@ MonoBehaviour:
   minSlideAngle: 0
   slideSteeringSharpness: 8
   slideStrafeSpeed: 6
-  slideMaxTimer: 3
+  slideMaxTimer: 1.8
   slideMinTimer: 1
   slideEndDecelRate: 20
   slideEndStopSpeed: 0.5

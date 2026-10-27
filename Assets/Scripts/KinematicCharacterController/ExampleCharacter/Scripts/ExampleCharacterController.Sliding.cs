@@ -137,8 +137,8 @@ namespace KinematicCharacterController.Examples
             // reading _slideSpeed reflect the actual intended forward speed, unaffected by strafing.
             _slideSpeed = forwardSpeed;
 
-            // Once the timer has ended and speed has bled off, end the slide.
-            if (timerHasEnded && forwardSpeed <= slideEndStopSpeed)
+            // Once the slide has dropped to crawl speed (e.g. the timer ran out and speed bled off), hand over.
+            if (forwardSpeed <= crawlStateMaxSpeed)
             {
                 StopSlide();
             }
@@ -151,7 +151,12 @@ namespace KinematicCharacterController.Examples
 
         private void StopSlide()
         {
-            TransitionToState(CharacterState.Default);
+            // Still crouched on the ground and slow enough: crawl instead of standing up
+            bool canCrawl = _isCrouching && _shouldBeCrouching
+                && Motor.GroundingStatus.IsStableOnGround
+                && HorizontalSpeed() <= crawlStateMaxSpeed + crawlExitSpeedMargin;
+
+            TransitionToState(canCrawl ? CharacterState.Crawling : CharacterState.Default);
         }
 
     }

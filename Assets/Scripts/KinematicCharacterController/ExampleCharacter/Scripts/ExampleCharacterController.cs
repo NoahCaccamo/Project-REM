@@ -8,7 +8,8 @@ namespace KinematicCharacterController.Examples
         Default,
         Climbing,
         Sliding,
-        WallRunning
+        WallRunning,
+        Crawling
     }
 
     public enum OrientationMethod
@@ -566,6 +567,39 @@ namespace KinematicCharacterController.Examples
                         break;
                     }
 
+                case CharacterState.Crawling:
+                    {
+                        _moveInputVector = cameraPlanarRotation * moveInputVector;
+                        _slideStrafeInput = moveInputVector.x;
+                        _lookInputVector = cameraPlanarDirection;
+
+                        if (inputs.JumpDown)
+                        {
+                            _timeSinceJumpRequested = 0f;
+                            _jumpRequested = true;
+                        }
+                        _jumpHeld = inputs.JumpHeld;
+
+                        if (inputs.CrouchDown)
+                        {
+                            _shouldBeCrouching = true;
+                        }
+                        else if (inputs.CrouchUp)
+                        {
+                            _shouldBeCrouching = false;
+                        }
+
+                        wantsGrabL = inputs.LeftHand;
+                        wantsGrabR = inputs.RightHand;
+                        grabLDown = inputs.LeftHandDown;
+                        grabRDown = inputs.RightHandDown;
+                        if (grabLDown) _interactRequestedL = true;
+                        if (grabRDown) _interactRequestedR = true;
+
+                        break;
+                    }
+
+
                 case CharacterState.Sliding:
                     {
                         _moveInputVector = cameraPlanarRotation * moveInputVector;
@@ -826,15 +860,28 @@ namespace KinematicCharacterController.Examples
                 TransitionToState(CharacterState.Default);
             }
 
-            float slideMinSpeed = 1f;
-            // Only slide when grounded and moving
+            // Crouched on the ground: fast = slide, slow = crawl
             if (_isCrouching && Motor.GroundingStatus.IsStableOnGround)
             {
-                float speed = Motor.BaseVelocity.magnitude;
+                float groundSpeed = HorizontalSpeed();
 
-                if (speed > slideMinSpeed && CurrentCharacterState != CharacterState.Sliding)
+                if (CurrentCharacterState == CharacterState.Crawling)
                 {
-                    StartSlide();
+                    if (groundSpeed > crawlStateMaxSpeed + crawlExitSpeedMargin)
+                    {
+                        StartSlide();
+                    }
+                }
+                else if (CurrentCharacterState != CharacterState.Sliding)
+                {
+                    if (groundSpeed > crawlStateMaxSpeed)
+                    {
+                        StartSlide();
+                    }
+                    else if (CurrentCharacterState == CharacterState.Default)
+                    {
+                        StartCrawl();
+                    }
                 }
             }
 
@@ -938,6 +985,7 @@ namespace KinematicCharacterController.Examples
                 /// This is where you tell your character what its velocity should be right now. 
                 /// This is the ONLY place where you can set the character's velocity
                 /// </summary>
+                case CharacterState.Crawling:
                 case CharacterState.Sliding:
                     {
                         if (_lookInputVector.sqrMagnitude > 0f && OrientationSharpness > 0f)
@@ -1463,6 +1511,41 @@ namespace KinematicCharacterController.Examples
                         }
                         break;
                     }
+                case CharacterState.Crawling:
+                    {
+                        _jumpedThisFrame = false;
+                        _timeSinceJumpRequested += deltaTime;
+
+                        HandleCrawling(ref currentVelocity, deltaTime);
+
+                        if (_jumpRequested)
+                        {
+                            if (!_jumpConsumed && (Motor.GroundingStatus.IsStableOnGround || _timeSinceLastAbleToJump <= JumpPostGroundingGraceTime))
+                            {
+                                Vector3 jumpDirection = Motor.CharacterUp;
+                                if (Motor.GroundingStatus.FoundAnyGround && !Motor.GroundingStatus.IsStableOnGround)
+                                {
+                                    jumpDirection = Motor.GroundingStatus.GroundNormal;
+                                }
+
+                                Motor.ForceUnground();
+
+                                Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+                                currentVelocity = horizontalVelocity + (jumpDirection * JumpUpSpeed);
+
+                                _bhopPending = false;
+                                _jumpRequested = false;
+                                _jumpConsumed = true;
+                                _jumpedThisFrame = true;
+                            }
+                        }
+
+                        if (!Motor.GroundingStatus.IsStableOnGround)
+                        {
+                            TransitionToState(CharacterState.Default);
+                        }
+                        break;
+                    }
             }
         }
 
@@ -1574,6 +1657,48 @@ namespace KinematicCharacterController.Examples
                         if (!_isCrouching)
                         {
                             StopSlide();
+                        }
+                        break;
+                    }
+                case CharacterState.Crawling:
+                    {
+                        // Jump-related values
+                        if (Motor.GroundingStatus.IsStableOnGround)
+                        {
+                            if (!_jumpedThisFrame)
+                            {
+                                _jumpConsumed = false;
+                            }
+                            _timeSinceLastAbleToJump = 0f;
+                        }
+                        else
+                        {
+                            _timeSinceLastAbleToJump += deltaTime;
+                        }
+
+                        // Handle uncrouching (stays crawling if something is overhead)
+                        if (_isCrouching && !_shouldBeCrouching)
+                        {
+                            Motor.SetCapsuleDimensions(0.5f, 2f, 1f);
+                            if (Motor.CharacterOverlap(
+                                Motor.TransientPosition,
+                                Motor.TransientRotation,
+                                _probedColliders,
+                                Motor.CollidableLayers,
+                                QueryTriggerInteraction.Ignore) > 0)
+                            {
+                                Motor.SetCapsuleDimensions(0.5f, CrouchedCapsuleHeight, CrouchedCapsuleHeight * 0.5f);
+                            }
+                            else
+                            {
+                                MeshRoot.localScale = new Vector3(1f, 1f, 1f);
+                                _isCrouching = false;
+                            }
+                        }
+
+                        if (!_isCrouching)
+                        {
+                            TransitionToState(CharacterState.Default);
                         }
                         break;
                     }
