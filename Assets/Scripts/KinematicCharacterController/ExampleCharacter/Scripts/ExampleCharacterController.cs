@@ -381,6 +381,10 @@ namespace KinematicCharacterController.Examples
                         _isWallRunning = false;
                         _wallRunCooldown = WALL_RUN_COOLDOWN_TIME;
                         _canWallRun = false;
+                        _wallRunReversing = false;
+
+                        // Coyote window for a mid-air jump (cleared below if this exit was a wall jump)
+                        _wallRunCoyoteTimer = WallRunCoyoteTime;
                         break;
                     }
             }
@@ -393,6 +397,10 @@ namespace KinematicCharacterController.Examples
         {
             // Clamp input
             Vector3 moveInputVector = Vector3.ClampMagnitude(new Vector3(inputs.MoveAxisRight, 0f, inputs.MoveAxisForward), 1f);
+
+            _rawMoveInput = moveInputVector;
+            if (inputs.CrouchDown) _crouchButtonHeld = true;
+            else if (inputs.CrouchUp) _crouchButtonHeld = false;
 
             // Calculate camera direction and rotation on the character plane
             Vector3 cameraPlanarDirection = Vector3.ProjectOnPlane(inputs.CameraRotation * Vector3.forward, Motor.CharacterUp).normalized;
@@ -831,12 +839,15 @@ namespace KinematicCharacterController.Examples
             }
 
             // Wall run detection
-            if (EnableWallRunning && CurrentCharacterState == CharacterState.Default && !Motor.GroundingStatus.IsStableOnGround && _canWallRun)
+            if (EnableWallRunning && CurrentCharacterState == CharacterState.Default && !Motor.GroundingStatus.IsStableOnGround && _canWallRun && CanInitiateWallRun())
             {
                 Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                 if (horizontalVel.magnitude >= MinSpeedForWallRun)
                 {
-                    if (DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
+                    // Never start a wall run that travels opposite to where the player is facing
+                    Vector3 facing = GetWallRunReferenceDirection(Motor.CharacterUp);
+                    if (Vector3.Dot(horizontalVel.normalized, facing) > 0f
+                        && DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
                     {
                         StartWallRun(wallNormal, isLeftWall);
                     }
@@ -1244,6 +1255,23 @@ namespace KinematicCharacterController.Examples
                             _jumpConsumed = false;
                         }
 
+                        // Wall run coyote jump: mid-air jump shortly after leaving a wall run without jumping
+                        if (_jumpRequested && _wallRunCoyoteTimer > 0f && !Motor.GroundingStatus.IsStableOnGround)
+                        {
+                            Motor.ForceUnground();
+
+                            Vector3 coyoteHorizontal = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+                            currentVelocity = coyoteHorizontal + (Motor.CharacterUp * JumpUpSpeed);
+
+                            _internalVelocityAdd = Vector3.zero;
+                            _isBouncing = false;
+                            _wallRunCoyoteTimer = 0f;
+                            _jumpRequested = false;
+                            _jumpConsumed = true;
+                            _jumpedThisFrame = true;
+                        }
+
+
                         if (_jumpRequested)
                         {
                             // See if we actually are allowed to jump
@@ -1393,6 +1421,7 @@ namespace KinematicCharacterController.Examples
                                 _jumpedThisFrame = true;
 
                                 TransitionToState(CharacterState.Default);
+                                _wallRunCoyoteTimer = 0f;
                                 isGrabbingL = false;
                                 isGrabbingR = false;
                                 LeftHandController.StopGrab();
@@ -1455,6 +1484,12 @@ namespace KinematicCharacterController.Examples
         {
             // Tick the bhop landing window timer
             _timeSinceLastLanding += deltaTime;
+
+            if (_wallRunBlockTimer > 0f) _wallRunBlockTimer -= deltaTime;
+            if (_wallRunCoyoteTimer > 0f)
+            {
+                _wallRunCoyoteTimer = Motor.GroundingStatus.IsStableOnGround ? 0f : _wallRunCoyoteTimer - deltaTime;
+            }
 
             // Handle jump input buffer expiry. This must run every frame regardless of character
             // state so a buffered jump (e.g. pressed just before landing, or just before touching

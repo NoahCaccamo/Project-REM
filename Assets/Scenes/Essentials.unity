@@ -8761,7 +8761,7 @@ MonoBehaviour:
   speedDisplay: {fileID: 0}
   EnableWallRunning: 1
   WallRunSpeed: 16.5
-  WallRunMaxDuration: 2
+  WallRunMaxDuration: 263.8
   WallRunGravityMultiplier: 0.2
   WallRunJumpHeight: 12
   WallRunJumpAwayForce: 8
@@ -8775,11 +8775,23 @@ MonoBehaviour:
   WallRunDetectionRays: 5
   WallRunMaxEntryAngle: 65
   WallRunMaxDetectionReach: 20.5
+  WallRunSlideDelay: 1
+  WallRunMaxFallSpeed: 4
+  WallRunFallAcceleration: 8
+  WallRunVerticalSharpness: 12
   WallRunCameraAlign: 1
   WallRunCameraAlignMaxSpeed: 90
   WallRunCameraAlignMinSpeed: 8
   WallRunCameraAlignCurve: 0.6
   WallRunCameraAlignDeadzone: 3
+  WallRunRaysUseCamera: 1
+  WallRunForwardInputThreshold: 0.1
+  WallRunAwayInputThreshold: 0.5
+  WallRunCrouchBlockTime: 0.25
+  WallRunReverseLookThreshold: 0.3
+  WallRunReverseAcceleration: 90
+  WallRunCoyoteTime: 0.15
+  DrawWallRunGizmos: 1
 --- !u!114 &6615662580611611646
 MonoBehaviour:
   m_ObjectHideFlags: 0
