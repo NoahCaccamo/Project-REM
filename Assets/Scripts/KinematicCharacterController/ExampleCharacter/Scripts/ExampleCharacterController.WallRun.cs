@@ -39,6 +39,18 @@ namespace KinematicCharacterController.Examples
         [Tooltip("Cap on how far forward angled rays can reach (meters).")]
         public float WallRunMaxDetectionReach = 2.5f;
 
+        [Header("Wall Run Sliding Down")]
+        [Tooltip("Seconds into a single wall run before the player starts sliding down.")]
+        public float WallRunSlideDelay = 1f;
+        [Tooltip("Max downward speed (m/s) while wall running.")]
+        public float WallRunMaxFallSpeed = 4f;
+        [Tooltip("How quickly (m/s^2) the downward speed ramps up once sliding starts.")]
+        public float WallRunFallAcceleration = 8f;
+        [Tooltip("How quickly vertical velocity blends to its target (entry and slide).")]
+        public float WallRunVerticalSharpness = 12f;
+
+        private float _wallRunFallSpeed;
+
         [Header("Wall Run Camera Alignment")]
         public bool WallRunCameraAlign = true;
         [Tooltip("Pull speed (deg/s) when looking straight into the wall (90 degrees off parallel).")]
@@ -261,6 +273,7 @@ namespace KinematicCharacterController.Examples
             {
                 Motor.BaseVelocity = along.normalized * speed + vertical;
             }
+            _wallRunFallSpeed = 0f;
 
             TransitionToState(CharacterState.WallRunning);
             _wallRunNormal = wallNormal;
@@ -386,6 +399,8 @@ namespace KinematicCharacterController.Examples
                 wallForward = -wallAxis;
             }
 
+            _wallRunDirection = wallForward;
+
             // Start reversing when moving against the chosen direction
             float signedSpeed = Vector3.Dot(currentHorizontalVelocity, wallForward);
             if (signedSpeed < 0f)
@@ -393,8 +408,8 @@ namespace KinematicCharacterController.Examples
                 _wallRunReversing = true;
             }
 
-            _wallRunDirection = wallForward;
-
+            // ---- Horizontal ----
+            Vector3 newHorizontal;
             if (_wallRunReversing)
             {
                 // Rapidly decelerate through zero and accelerate up to WallRunSpeed the other way
@@ -404,8 +419,7 @@ namespace KinematicCharacterController.Examples
                     _wallRunReversing = false;
                 }
 
-                Vector3 vertical = currentVelocity - currentHorizontalVelocity;
-                currentVelocity = wallForward * newSpeed + vertical;
+                newHorizontal = wallForward * newSpeed;
             }
             else
             {
@@ -413,17 +427,23 @@ namespace KinematicCharacterController.Examples
                 float targetSpeed = Mathf.Max(signedSpeed, WallRunSpeed);
                 targetSpeed *= Mathf.Pow(WallRunSpeedDecay, deltaTime);
 
-                Vector3 targetVelocity = wallForward * targetSpeed;
-
-                // Smooth transition to target velocity (less aggressive to preserve momentum better)
-                currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, 1f - Mathf.Exp(-5f * deltaTime));
+                newHorizontal = Vector3.Lerp(currentHorizontalVelocity, wallForward * targetSpeed, 1f - Mathf.Exp(-5f * deltaTime));
             }
 
-            // Reduced gravity while wall running
-            currentVelocity += playerCharacter.CurrentStats.gravity * WallRunGravityMultiplier * deltaTime;
+            // Slight pull toward wall to maintain contact
+            newHorizontal += -_wallRunNormal * 2f * deltaTime;
 
-            // Apply slight pull toward wall to maintain contact
-            currentVelocity += -_wallRunNormal * 2f * deltaTime;
+            // ---- Vertical (independent of direction / reversing) ----
+            // Hold height for WallRunSlideDelay seconds of THIS wall run, then slide down up to a max speed
+            if (_wallRunTimer > WallRunSlideDelay)
+            {
+                _wallRunFallSpeed = Mathf.MoveTowards(_wallRunFallSpeed, WallRunMaxFallSpeed, WallRunFallAcceleration * deltaTime);
+            }
+
+            float currentVertical = Vector3.Dot(currentVelocity, up);
+            float newVertical = Mathf.Lerp(currentVertical, -_wallRunFallSpeed, 1f - Mathf.Exp(-WallRunVerticalSharpness * deltaTime));
+
+            currentVelocity = newHorizontal + up * newVertical;
         }
 
         [Header("Wall Run Debug")]
