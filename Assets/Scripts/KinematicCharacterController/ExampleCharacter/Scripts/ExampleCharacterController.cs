@@ -1001,22 +1001,34 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float sprintSpeed = 13f;
 
         /// <summary>
-        /// Shared air steering for both normal and crouched air movement. Never adds speed beyond sprint speed:
-        /// above it the velocity is only rotated towards targetDir (rate-limited, magnitude preserved), below it
-        /// the velocity accelerates towards sprint speed along targetDir.
+        /// Shared air steering for normal and crouched air movement, Quake/Source style.
+        /// Up to sprint speed: standard accelerate (add speed along targetDir, capped at sprint speed).
+        /// Above sprint speed: the target direction is split into a component across the travel direction
+        /// (turns, no speed change) and a component against it (brakes in proportion to how directly it opposes).
+        /// Both halves apply the same rate at 180 degrees, so there is no seam at sprint speed.
         /// </summary>
         private Vector3 SteerAirVelocity(Vector3 velocityOnPlane, Vector3 targetDir, float airAcceleration, float deltaTime)
         {
             float speed = velocityOnPlane.magnitude;
+            float step = airAcceleration * deltaTime;
 
             if (speed > sprintSpeed)
             {
-                float maxTurnRadians = (airAcceleration * deltaTime) / speed;
-                return Vector3.RotateTowards(velocityOnPlane, targetDir * speed, maxTurnRadians, 0f);
+                Vector3 velocityDir = velocityOnPlane / speed;
+                float along = Vector3.Dot(targetDir, velocityDir);
+                Vector3 across = targetDir - (velocityDir * along);
+
+                // Turn: rotate the direction by the across component, magnitude handled below
+                Vector3 newDir = (velocityDir + (across * (step / speed))).normalized;
+
+                // Brake: only when the target opposes travel, never below sprint speed here
+                float newSpeed = Mathf.Max(sprintSpeed, speed + (Mathf.Min(along, 0f) * step));
+
+                return newDir * newSpeed;
             }
 
             float speedInTargetDir = Vector3.Dot(velocityOnPlane, targetDir);
-            float addSpeed = Mathf.Clamp(sprintSpeed - speedInTargetDir, 0f, airAcceleration * deltaTime);
+            float addSpeed = Mathf.Clamp(sprintSpeed - speedInTargetDir, 0f, step);
             Vector3 result = velocityOnPlane + (targetDir * addSpeed);
 
             return result.magnitude > sprintSpeed ? result.normalized * sprintSpeed : result;
