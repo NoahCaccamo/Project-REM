@@ -33,8 +33,6 @@ namespace KinematicCharacterController.Examples
         public float WallRunEntryDistance = 0.45f;
         [Tooltip("Staying in a wall run (and wall jumping from it): max gap (m) between the capsule surface and the wall. Smaller than the entry distance so you can't jump off a wall that is far away.")]
         public float WallRunStayDistance = 0.3f;
-        [Tooltip("Entry rays fan around the camera direction only while it is within this many degrees of your travel direction. Beyond it they fan around your velocity so a wall in front of you is not missed.")]
-        [Range(10f, 180f)] public float WallRunCameraRefMaxAngle = 60f;
         [Tooltip("How fast (m/s^2) speed ramps up to WallRunSpeed when entering slower than it. Speed above WallRunSpeed is never reduced by this.")]
         public float WallRunEntryAcceleration = 40f;
         [Tooltip("A wall jump only fires if the jump was pressed within this many seconds (separate from the ground jump buffer, which is much longer).")]
@@ -76,10 +74,6 @@ namespace KinematicCharacterController.Examples
         /// <summary>True when the camera should be lowered (crouched/crouching and on the ground).</summary>
         public bool WantsLowCamera => (_isCrouching || _shouldBeCrouching) && Motor.GroundingStatus.IsStableOnGround;
 
-
-        [Tooltip("Fan the detection rays out from the camera's horizontal facing instead of the velocity direction.")]
-        public bool WallRunRaysUseCamera = true;
-
         [Header("Wall Run Input Rules")]
         [Tooltip("Forward input must exceed this to enter / stay in a wall run.")]
         public float WallRunForwardInputThreshold = 0.1f;
@@ -110,37 +104,34 @@ namespace KinematicCharacterController.Examples
 
         /// <summary>
         /// Horizontal reference direction the detection fan is built around.
-        /// Not wall running: camera facing, unless the camera points far away from the travel direction.
-        /// Wall running: velocity direction.
+        /// Not wall running: ALWAYS the direction the camera is looking (horizontal), nothing else.
+        /// Wall running: the velocity direction.
         /// </summary>
         private Vector3 GetWallRunReferenceDirection(Vector3 up)
         {
             Vector3 vel = Vector3.ProjectOnPlane(Motor.BaseVelocity, up);
-            // Read the camera transform directly (not _lookInputVector, which is a frame old and
-            // is not the camera at all when OrientationMethod is TowardsMovement)
-            Vector3 cam = playerCamera != null
-                ? Vector3.ProjectOnPlane(playerCamera.transform.forward, up)
-                : Vector3.zero;
 
-            bool preferCamera = WallRunRaysUseCamera && CurrentCharacterState != CharacterState.WallRunning;
-
-            if (preferCamera)
+            if (CurrentCharacterState == CharacterState.WallRunning)
             {
+                if (vel.sqrMagnitude > 0.01f) return vel.normalized;
+                return _wallRunDirection.sqrMagnitude > 0.0001f
+                    ? _wallRunDirection.normalized
+                    : Vector3.ProjectOnPlane(Motor.CharacterForward, up).normalized;
+            }
+
+            // Camera forward, read directly from the camera transform. Flattening only removes pitch; if the
+            // camera is looking almost straight up or down, fall back to its up vector so there is always a heading.
+            if (playerCamera != null)
+            {
+                Vector3 cam = Vector3.ProjectOnPlane(playerCamera.transform.forward, up);
+                if (cam.sqrMagnitude < 0.0001f)
+                {
+                    cam = Vector3.ProjectOnPlane(playerCamera.transform.up, up);
+                }
                 if (cam.sqrMagnitude > 0.0001f)
                 {
-                    // The camera only defines the fan while it roughly agrees with where we are travelling
-                    if (vel.sqrMagnitude > 0.01f && Vector3.Angle(cam, vel) > WallRunCameraRefMaxAngle)
-                    {
-                        return vel.normalized;
-                    }
                     return cam.normalized;
                 }
-                if (vel.sqrMagnitude > 0.01f) return vel.normalized;
-            }
-            else
-            {
-                if (vel.sqrMagnitude > 0.01f) return vel.normalized;
-                if (cam.sqrMagnitude > 0.0001f) return cam.normalized;
             }
 
             return Vector3.ProjectOnPlane(Motor.CharacterForward, up).normalized;
