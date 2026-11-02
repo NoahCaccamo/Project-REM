@@ -13,7 +13,6 @@ namespace KinematicCharacterController.Examples
         public float WallRunJumpHeight = 12f;
         public float WallRunJumpAwayForce = 8f;
         public float WallRunJumpMomentumBoost = 1.15f;
-        public float WallRunDetectionDistance = 0.6f;
         public float MinSpeedForWallRun = 5f;
         public float WallRunCameraTilt = 15f;
         public float CameraTiltSpeed = 8f;
@@ -28,6 +27,18 @@ namespace KinematicCharacterController.Examples
         private const float WALL_RUN_COOLDOWN_TIME = 0.3f;
         private float _currentCameraTilt = 0f;
         private float _wallRunEntrySpeed = 0f;
+
+        [Header("Wall Run Detection Distances")]
+        [Tooltip("Entering a wall run: max gap (m) between the capsule SURFACE and the wall. Keep it above the distance you cover in one physics step toward the wall (speed x 0.02 s), or you will hit the wall before entering.")]
+        public float WallRunEntryDistance = 0.45f;
+        [Tooltip("Staying in a wall run (and wall jumping from it): max gap (m) between the capsule surface and the wall. Smaller than the entry distance so you can't jump off a wall that is far away.")]
+        public float WallRunStayDistance = 0.3f;
+        [Tooltip("Entry rays fan around the camera direction only while it is within this many degrees of your travel direction. Beyond it they fan around your velocity so a wall in front of you is not missed.")]
+        [Range(10f, 180f)] public float WallRunCameraRefMaxAngle = 60f;
+        [Tooltip("How fast (m/s^2) speed ramps up to WallRunSpeed when entering slower than it. Speed above WallRunSpeed is never reduced by this.")]
+        public float WallRunEntryAcceleration = 40f;
+        [Tooltip("A wall jump only fires if the jump was pressed within this many seconds (separate from the ground jump buffer, which is much longer).")]
+        public float WallJumpBufferTime = 0.06f;
 
         [Header("Wall Run Entry")]
         [Tooltip("How far forward of straight-sideways (degrees) wall rays fan out. 0 = old behaviour (pure side rays). Higher = can catch walls from shallower approach.")]
@@ -99,20 +110,31 @@ namespace KinematicCharacterController.Examples
 
         /// <summary>
         /// Horizontal reference direction the detection fan is built around.
-        /// Not wall running: camera facing (unaffected by capsule rotation).
+        /// Not wall running: camera facing, unless the camera points far away from the travel direction.
         /// Wall running: velocity direction.
-        /// Falls back to velocity / camera / capsule forward if the preferred source is unavailable.
         /// </summary>
         private Vector3 GetWallRunReferenceDirection(Vector3 up)
         {
             Vector3 vel = Vector3.ProjectOnPlane(Motor.BaseVelocity, up);
-            Vector3 cam = Vector3.ProjectOnPlane(_lookInputVector, up);
+            // Read the camera transform directly (not _lookInputVector, which is a frame old and
+            // is not the camera at all when OrientationMethod is TowardsMovement)
+            Vector3 cam = playerCamera != null
+                ? Vector3.ProjectOnPlane(playerCamera.transform.forward, up)
+                : Vector3.zero;
 
             bool preferCamera = WallRunRaysUseCamera && CurrentCharacterState != CharacterState.WallRunning;
 
             if (preferCamera)
             {
-                if (cam.sqrMagnitude > 0.0001f) return cam.normalized;
+                if (cam.sqrMagnitude > 0.0001f)
+                {
+                    // The camera only defines the fan while it roughly agrees with where we are travelling
+                    if (vel.sqrMagnitude > 0.01f && Vector3.Angle(cam, vel) > WallRunCameraRefMaxAngle)
+                    {
+                        return vel.normalized;
+                    }
+                    return cam.normalized;
+                }
                 if (vel.sqrMagnitude > 0.01f) return vel.normalized;
             }
             else
@@ -157,21 +179,23 @@ namespace KinematicCharacterController.Examples
         }
 
         /// <summary>
-        /// Detects walls suitable for wall running using a fan of horizontal rays on each side,
-        /// relative to the travel direction so shallow approaches are caught before impact.
+        /// Detects walls for wall running using a fan of horizontal rays from the capsule center.
+        /// A hit only counts if the wall PLANE is within the gap (entry or stay distance) of the capsule surface,
+        /// so the ray length no longer decides how far away a wall can be.
         /// </summary>
-        private bool DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall)
+        private bool DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall, bool staying = false)
         {
             wallNormal = Vector3.zero;
             isLeftWall = false;
 
             Vector3 up = Motor.CharacterUp;
-            Vector3 origin = Motor.TransientPosition;
+            Vector3 origin = GetWallRunOrigin();
+            float radius = Motor.Capsule.radius;
+            float gap = staying ? WallRunStayDistance : WallRunEntryDistance;
 
-            // Rays are fanned around this direction (camera-based), NOT the capsule
             Vector3 refDir = GetWallRunReferenceDirection(up);
 
-            // Actual travel direction is still used to judge whether entering this wall makes sense
+            // Actual travel direction judges whether entering this wall makes sense
             Vector3 travelDir = Vector3.ProjectOnPlane(Motor.BaseVelocity, up);
             if (travelDir.sqrMagnitude < 0.01f)
             {
@@ -187,21 +211,21 @@ namespace KinematicCharacterController.Examples
             }
 
             float maxEntrySin = Mathf.Sin(WallRunMaxEntryAngle * Mathf.Deg2Rad);
-            float bestScore = float.MaxValue;
+            float bestGap = float.MaxValue;
             int bestDebugIndex = -1;
             bool found = false;
 
             int rays = Mathf.Max(1, WallRunDetectionRays);
-            for (int side = -1; side <= 1; side += 2) // -1 = left, +1 = right
+            for (int side = -1; side <= 1; side += 2)
             {
                 for (int i = 0; i < rays; i++)
                 {
-                    GetWallRunRay(side, i, rays, refDir, up, out Vector3 dir, out float distance);
+                    GetWallRunRay(side, i, rays, refDir, up, gap, out Vector3 dir, out float distance);
 
                     WallRayDebug dbg = new WallRayDebug
                     {
                         Origin = origin,
-                        End = origin + dir * distance,
+                        RayEnd = origin + dir * distance,
                         Result = WallRayResult.Miss
                     };
 
@@ -209,27 +233,26 @@ namespace KinematicCharacterController.Examples
                     {
                         dbg.HitPoint = hit.point;
                         dbg.HitNormal = hit.normal;
-                        dbg.End = hit.point;
                         dbg.Result = WallRayResult.Rejected;
 
-                        // Wall must be mostly vertical
                         if (Vector3.Dot(hit.normal, up) < 0.1f)
                         {
                             Vector3 planarNormal = Vector3.ProjectOnPlane(hit.normal, up).normalized;
                             float into = Vector3.Dot(travelDir, planarNormal);
 
-                            // Not moving away from the wall, and not hitting too head-on
-                            if (!(into > 0.05f || Mathf.Abs(into) > maxEntrySin))
+                            // Real distance from the capsule surface to the wall plane
+                            float planeGap = Vector3.Dot(hit.point - origin, -planarNormal) - radius;
+
+                            bool angleOk = staying
+                                ? into <= 0.3f                                              // only drop the run if clearly moving away
+                                : !(into > 0.05f || Mathf.Abs(into) > maxEntrySin);          // entry: not away, not too head-on
+
+                            if (angleOk && planeGap <= gap && planeGap < bestGap)
                             {
-                                // Prefer the wall that is laterally closest
-                                float lateral = Vector3.Dot(hit.point - origin, -planarNormal);
-                                if (lateral < bestScore)
-                                {
-                                    bestScore = lateral;
-                                    wallNormal = planarNormal;
-                                    found = true;
-                                    bestDebugIndex = debug ? _wallRayDebug.Count : -1;
-                                }
+                                bestGap = planeGap;
+                                wallNormal = planarNormal;
+                                found = true;
+                                bestDebugIndex = debug ? _wallRayDebug.Count : -1;
                             }
                         }
                     }
@@ -250,7 +273,6 @@ namespace KinematicCharacterController.Examples
 
             if (found)
             {
-                // Wall is on the left if it lies on the negative side of the travel direction
                 Vector3 right = Vector3.Cross(up, travelDir);
                 isLeftWall = Vector3.Dot(-wallNormal, right) < 0f;
             }
@@ -262,24 +284,31 @@ namespace KinematicCharacterController.Examples
         /// </summary>
         private void StartWallRun(Vector3 wallNormal, bool isLeftWall)
         {
-            // Redirect horizontal velocity along the wall, keeping its speed (no momentum lost to the wall)
             Vector3 up = Motor.CharacterUp;
             Vector3 vel = Motor.BaseVelocity;
             Vector3 horizontal = Vector3.ProjectOnPlane(vel, up);
             Vector3 vertical = vel - horizontal;
             float speed = horizontal.magnitude;
-            Vector3 along = Vector3.ProjectOnPlane(horizontal, wallNormal);
-            if (along.sqrMagnitude > 0.0001f)
-            {
-                Motor.BaseVelocity = along.normalized * speed + vertical;
-            }
-            _wallRunFallSpeed = 0f;
 
-            TransitionToState(CharacterState.WallRunning);
+            // Direction along the wall that matches our travel direction
+            Vector3 alongDir = Vector3.Cross(wallNormal, up).normalized;
+            if (Vector3.Dot(alongDir, horizontal) < 0f)
+            {
+                alongDir = -alongDir;
+            }
+
+            // Move ALL horizontal speed onto the wall axis (no loss for the part that pointed at the wall)
+            Motor.BaseVelocity = alongDir * speed + vertical;
+
+            // Set wall data BEFORE entering the state so OnStateEnter sees the new wall
             _wallRunNormal = wallNormal;
+            _wallRunDirection = alongDir;
             _isWallRunning = true;
             _isWallRunningLeft = isLeftWall;
+            _wallRunFallSpeed = 0f;
             _jumpConsumed = false;
+
+            TransitionToState(CharacterState.WallRunning);
             Motor.ForceUnground();
         }
 
@@ -346,7 +375,7 @@ namespace KinematicCharacterController.Examples
             }
 
             // Exit: wall lost (also covers running off the end of a wall)
-            if (!DetectWallForRunning(out Vector3 currentWallNormal, out bool isLeftWall))
+            if (!DetectWallForRunning(out Vector3 currentWallNormal, out bool isLeftWall, true))
             {
                 TransitionToState(CharacterState.Default);
                 return;
@@ -423,11 +452,14 @@ namespace KinematicCharacterController.Examples
             }
             else
             {
-                // PRESERVE MOMENTUM: use the larger of current speed or base wall run speed
-                float targetSpeed = Mathf.Max(signedSpeed, WallRunSpeed);
-                targetSpeed *= Mathf.Pow(WallRunSpeedDecay, deltaTime);
+                // All current horizontal speed goes straight onto the wall axis. No Lerp between directions,
+                // which shrinks the vector when they differ (that was the shallow-angle speed loss).
+                float carried = currentHorizontalVelocity.magnitude;
+                float targetSpeed = carried < WallRunSpeed
+                    ? Mathf.MoveTowards(carried, WallRunSpeed, WallRunEntryAcceleration * deltaTime)
+                    : carried * Mathf.Pow(WallRunSpeedDecay, deltaTime);
 
-                newHorizontal = Vector3.Lerp(currentHorizontalVelocity, wallForward * targetSpeed, 1f - Mathf.Exp(-5f * deltaTime));
+                newHorizontal = wallForward * targetSpeed;
             }
 
             // Slight pull toward wall to maintain contact
@@ -455,7 +487,7 @@ namespace KinematicCharacterController.Examples
         private struct WallRayDebug
         {
             public Vector3 Origin;
-            public Vector3 End;
+            public Vector3 RayEnd;      // full cast length, exactly what Physics.Raycast was given
             public Vector3 HitPoint;
             public Vector3 HitNormal;
             public WallRayResult Result;
@@ -466,60 +498,50 @@ namespace KinematicCharacterController.Examples
 
         private void DrawGizmosForWallrun()
         {
-            if (!DrawWallRunGizmos || Motor == null)
+            if (!DrawWallRunGizmos || Motor == null || !Application.isPlaying)
                 return;
 
-            // Show real detection results if they're fresh, otherwise a gray preview of the fan
-            bool fresh = Application.isPlaying && (Time.time - _wallRayDebugTime) < 0.1f;
-            if (fresh)
-            {
-                for (int i = 0; i < _wallRayDebug.Count; i++)
-                {
-                    WallRayDebug r = _wallRayDebug[i];
-                    switch (r.Result)
-                    {
-                        case WallRayResult.Chosen: Gizmos.color = Color.green; break;
-                        case WallRayResult.Rejected: Gizmos.color = Color.yellow; break;
-                        default: Gizmos.color = Color.red; break;
-                    }
+            // Only draw rays that were actually cast, using the exact origin / end / result recorded at cast time.
+            // Nothing is recomputed here, so the gizmos can never differ from the real raycasts.
+            if (Time.time - _wallRayDebugTime > 0.1f)
+                return;
 
-                    Gizmos.DrawLine(r.Origin, r.End);
-                    if (r.Result != WallRayResult.Miss)
-                    {
-                        Gizmos.DrawSphere(r.HitPoint, 0.06f);
-                        Gizmos.DrawLine(r.HitPoint, r.HitPoint + r.HitNormal * 0.5f);
-                    }
+            for (int i = 0; i < _wallRayDebug.Count; i++)
+            {
+                WallRayDebug r = _wallRayDebug[i];
+                switch (r.Result)
+                {
+                    case WallRayResult.Chosen: Gizmos.color = Color.green; break;
+                    case WallRayResult.Rejected: Gizmos.color = Color.yellow; break;
+                    default: Gizmos.color = Color.red; break;
                 }
-                return;
-            }
 
-            Vector3 up = Motor.CharacterUp;
-            Vector3 origin = Motor.TransientPosition;
-            Vector3 refDir = GetWallRunReferenceDirection(up);
-
-            Gizmos.color = new Color(0.6f, 0.6f, 0.6f, 0.8f);
-            int rays = Mathf.Max(1, WallRunDetectionRays);
-            for (int side = -1; side <= 1; side += 2)
-            {
-                for (int i = 0; i < rays; i++)
+                Gizmos.DrawLine(r.Origin, r.RayEnd);
+                if (r.Result != WallRayResult.Miss)
                 {
-                    GetWallRunRay(side, i, rays, refDir, up, out Vector3 dir, out float distance);
-                    Gizmos.DrawLine(origin, origin + dir * distance);
+                    Gizmos.DrawSphere(r.HitPoint, 0.06f);
+                    Gizmos.DrawLine(r.HitPoint, r.HitPoint + r.HitNormal * 0.5f);
                 }
             }
         }
 
+        /// <summary>Rays start at the capsule center (chest height) instead of the feet.</summary>
+        private Vector3 GetWallRunOrigin()
+        {
+            return Motor.TransientPosition + (Motor.TransientRotation * Motor.CharacterTransformToCapsuleCenter);
+        }
+
         /// <summary>Builds the direction and length of one detection ray. Shared by detection and gizmos.</summary>
-        private void GetWallRunRay(int side, int index, int rayCount, Vector3 travelDir, Vector3 up, out Vector3 dir, out float distance)
+        private void GetWallRunRay(int side, int index, int rayCount, Vector3 refDir, Vector3 up, float gap, out Vector3 dir, out float distance)
         {
             // t = 0 -> straight sideways, t = 1 -> fully forward-fanned
             float t = rayCount == 1 ? 0f : (float)index / (rayCount - 1);
             float angleFromTravel = 90f - t * WallRunDetectionFanAngle;
-            dir = Quaternion.AngleAxis(side * angleFromTravel, up) * travelDir;
+            dir = Quaternion.AngleAxis(side * angleFromTravel, up) * refDir;
 
-            // Angled rays need more length to reach the same lateral distance
+            // Long enough that its perpendicular reach equals (capsule radius + gap)
             float sin = Mathf.Max(0.2f, Mathf.Sin(angleFromTravel * Mathf.Deg2Rad));
-            distance = Mathf.Min(WallRunDetectionDistance / sin, WallRunMaxDetectionReach);
+            distance = Mathf.Min((Motor.Capsule.radius + gap) / sin, WallRunMaxDetectionReach);
         }
 
     }

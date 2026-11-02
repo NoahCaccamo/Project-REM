@@ -318,7 +318,8 @@ namespace KinematicCharacterController.Examples
                         _wallRunEntrySpeed = horizontalVel.magnitude;
 
                         Vector3 wallForward = Vector3.Cross(_wallRunNormal, Motor.CharacterUp).normalized;
-                        if (Vector3.Dot(wallForward, Motor.CharacterForward) < 0f)
+                        float alongVelocity = Vector3.Dot(wallForward, horizontalVel);
+                        if (horizontalVel.sqrMagnitude > 0.01f ? alongVelocity < 0f : Vector3.Dot(wallForward, Motor.CharacterForward) < 0f)
                         {
                             wallForward = -wallForward;
                         }
@@ -750,14 +751,6 @@ namespace KinematicCharacterController.Examples
             Gizmos.DrawWireSphere(origin, grabRadius);
             Gizmos.DrawWireSphere(end, grabRadius);
 
-            // Draw wall run detection rays
-            if (EnableWallRunning && Motor != null)
-            {
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawRay(Motor.TransientPosition, Motor.CharacterRight * WallRunDetectionDistance);
-                Gizmos.DrawRay(Motor.TransientPosition, -Motor.CharacterRight * WallRunDetectionDistance);
-            }
-
             // Draw wall run direction when active
             if (CurrentCharacterState == CharacterState.WallRunning)
             {
@@ -891,9 +884,10 @@ namespace KinematicCharacterController.Examples
                 Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                 if (horizontalVel.magnitude >= MinSpeedForWallRun)
                 {
-                    // Never start a wall run that travels opposite to where the player is facing
-                    Vector3 facing = GetWallRunReferenceDirection(Motor.CharacterUp);
-                    if (Vector3.Dot(horizontalVel.normalized, facing) > 0f
+                    // Never start a wall run that travels opposite to where the player is facing (uses the camera directly)
+                    Vector3 facing = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
+                    if (facing.sqrMagnitude > 0.0001f
+                        && Vector3.Dot(horizontalVel.normalized, facing.normalized) > 0f
                         && DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
                     {
                         StartWallRun(wallNormal, isLeftWall);
@@ -1510,12 +1504,15 @@ namespace KinematicCharacterController.Examples
 
                 case CharacterState.WallRunning:
                     {
+                        // Keep the jump-press timer running so a stale buffered press can't fire a wall jump
+                        _timeSinceJumpRequested += deltaTime;
+
                         HandleWallRunning(ref currentVelocity, deltaTime);
 
-                        // Wall run jump
-                        if (_jumpRequested)
+                        // Wall run jump (only a recent press counts)
+                        if (_jumpRequested && CurrentCharacterState == CharacterState.WallRunning)
                         {
-                            if (!_jumpConsumed)
+                            if (!_jumpConsumed && _timeSinceJumpRequested <= WallJumpBufferTime)
                             {
                                 Motor.ForceUnground();
 
@@ -1535,6 +1532,7 @@ namespace KinematicCharacterController.Examples
                                 _jumpedThisFrame = true;
 
                                 TransitionToState(CharacterState.Default);
+                                _wallRunCoyoteTimer = 0f;
                             }
                         }
                         break;

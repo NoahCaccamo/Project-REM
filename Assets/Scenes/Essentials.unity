@@ -8771,11 +8771,15 @@ MonoBehaviour:
   WallRunJumpHeight: 12
   WallRunJumpAwayForce: 8
   WallRunJumpMomentumBoost: 1.15
-  WallRunDetectionDistance: 1
   MinSpeedForWallRun: 5
   WallRunCameraTilt: 15
   CameraTiltSpeed: 8
   WallRunSpeedDecay: 0.95
+  WallRunEntryDistance: 0.45
+  WallRunStayDistance: 0.45
+  WallRunCameraRefMaxAngle: 60
+  WallRunEntryAcceleration: 40
+  WallJumpBufferTime: 0.06
   WallRunDetectionFanAngle: 55
   WallRunDetectionRays: 5
   WallRunMaxEntryAngle: 65
