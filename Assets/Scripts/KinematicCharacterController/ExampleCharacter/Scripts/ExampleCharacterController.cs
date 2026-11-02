@@ -1251,7 +1251,8 @@ namespace KinematicCharacterController.Examples
 
                                 // Mouse steering: aim at the camera direction (plus the strafe offset) through the
                                 // SAME rate-limited steering as normal air movement, so it behaves identically.
-                                if (hasMoveInput)
+                                // While S is held, don't steer forward: S brakes instead (applied below).
+                                if (hasMoveInput && _rawMoveInput.z >= 0f)
                                 {
                                     Vector3 lookDir = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
                                     if (lookDir.sqrMagnitude > 0.0001f)
@@ -1275,6 +1276,21 @@ namespace KinematicCharacterController.Examples
                             if (steerDir.sqrMagnitude > 0f)
                             {
                                 newVelocityOnPlane = SteerAirVelocity(newVelocityOnPlane, steerDir, currentAirAcceleration, deltaTime);
+                            }
+
+                            // Crouched air braking: S brakes in proportion to how much "back" points against the travel direction
+                            // (full when looking along your travel direction, none when looking 90 degrees off), same idea as
+                            // the uncrouched air brake. The strafe angle ramp above is unchanged.
+                            if (_isCrouching && _rawMoveInput.z < 0f)
+                            {
+                                Vector3 lookFlat = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
+                                float planeSpeed = newVelocityOnPlane.magnitude;
+                                if (lookFlat.sqrMagnitude > 0.0001f && planeSpeed > 0.0001f)
+                                {
+                                    float alignment = Mathf.Max(0f, Vector3.Dot(newVelocityOnPlane / planeSpeed, lookFlat.normalized));
+                                    float brake = currentAirAcceleration * deltaTime * -_rawMoveInput.z * alignment;
+                                    newVelocityOnPlane *= Mathf.Max(0f, planeSpeed - brake) / planeSpeed;
+                                }
                             }
 
                             Vector3 addedVelocity = newVelocityOnPlane - currentVelocityOnInputsPlane;

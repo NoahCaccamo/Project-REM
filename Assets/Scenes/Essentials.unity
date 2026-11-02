@@ -8756,6 +8756,8 @@ MonoBehaviour:
   minSlideAngle: 0
   slideSteeringSharpness: 8
   slideStrafeSpeed: 6
+  slideNoInputFriction: 3.3
+  slideStopSpeed: 2
   slideMaxTimer: 1.8
   slideMinTimer: 1
   slideEndDecelRate: 20

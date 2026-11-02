@@ -24,6 +24,10 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float minSlideAngle = 10f;
         [SerializeField] private float slideSteeringSharpness = 8f;
         [SerializeField] private float slideStrafeSpeed = 2f;
+        [Tooltip("Slide friction while forward (W) is not held. Each second, slide speed drops by (this x current speed), the same model as WalkFriction. Higher = stops sooner. No extra braking is added for S.")]
+        [SerializeField] private float slideNoInputFriction = 1.2f;
+        [Tooltip("Floor for the friction 'control' speed (m/s), so a slow slide still comes to a stop instead of decaying forever. Same idea as WalkStopSpeed.")]
+        [SerializeField] private float slideStopSpeed = 2f;
 
         [Header("Slide Timer")]
         [SerializeField] private float slideMaxTimer = 3f;
@@ -112,10 +116,14 @@ namespace KinematicCharacterController.Examples
             // explicit accel/decel below.
             float forwardSpeed = _forwardSlideSpeed;
 
-            if (timerHasEnded)
+            bool forwardHeld = _rawMoveInput.z > 0.1f;
+
+            if (timerHasEnded || !forwardHeld)
             {
-                // Timer ran out: rapidly decelerate to a stop instead of holding at base speed.
-                forwardSpeed = Mathf.Max(0f, forwardSpeed - (slideEndDecelRate * deltaTime));
+                // No forward input (or the timer ran out): friction only, nothing is added to forward speed.
+                // Source-style: speed drops in proportion to itself, with slideStopSpeed as the floor.
+                float control = Mathf.Max(forwardSpeed, slideStopSpeed);
+                forwardSpeed = Mathf.Max(0f, forwardSpeed - (control * slideNoInputFriction * deltaTime));
             }
             else if (forwardSpeed > slideBaseSpeed)
             {
