@@ -8781,7 +8781,9 @@ MonoBehaviour:
   WallJumpBufferTime: 0.06
   WallRunDetectionFanAngle: 55
   WallRunDetectionRays: 5
-  WallRunMaxEntryAngle: 65
+  WallRunMaxLookAngle: 45
+  WallRunFullSpeedLookAngle: 30
+  WallRunSlowedRetention: 0.6
   WallRunMaxDetectionReach: 20.5
   WallRunSlideDelay: 1
   WallRunMaxFallSpeed: 4
