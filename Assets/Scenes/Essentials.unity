@@ -8771,14 +8771,19 @@ MonoBehaviour:
   WallRunJumpHeight: 12
   WallRunJumpAwayForce: 8
   WallRunJumpMomentumBoost: 1.15
-  WallRunDetectionDistance: 1
   MinSpeedForWallRun: 5
   WallRunCameraTilt: 15
   CameraTiltSpeed: 8
   WallRunSpeedDecay: 0.95
+  WallRunEntryDistance: 0.35
+  WallRunStayDistance: 0.35
+  WallRunEntryAcceleration: 40
+  WallJumpBufferTime: 0.06
   WallRunDetectionFanAngle: 55
   WallRunDetectionRays: 5
-  WallRunMaxEntryAngle: 65
+  WallRunMaxLookAngle: 45
+  WallRunFullSpeedLookAngle: 30
+  WallRunSlowedRetention: 0.6
   WallRunMaxDetectionReach: 20.5
   WallRunSlideDelay: 1
   WallRunMaxFallSpeed: 4
@@ -8789,7 +8794,6 @@ MonoBehaviour:
   WallRunCameraAlignMinSpeed: 8
   WallRunCameraAlignCurve: 0.6
   WallRunCameraAlignDeadzone: 3
-  WallRunRaysUseCamera: 1
   WallRunForwardInputThreshold: 0.1
   WallRunAwayInputThreshold: 0.5
   WallRunCrouchBlockTime: 0.25
