@@ -43,8 +43,29 @@ namespace KinematicCharacterController.Examples
         [Range(0f, 80f)] public float WallRunDetectionFanAngle = 55f;
         [Tooltip("Number of rays per side in the fan.")]
         [Range(1, 12)] public int WallRunDetectionRays = 5;
-        [Tooltip("Max angle (degrees) between velocity and the wall surface for a wall run to start. Steeper (head-on) hits are rejected.")]
-        [Range(5f, 90f)] public float WallRunMaxEntryAngle = 65f;
+        [Tooltip("Max angle (degrees) between your LOOK direction and the wall surface for a wall run to start. 0 = looking along the wall, 90 = looking straight at it. Steeper than this is rejected.")]
+        [Range(5f, 90f)] public float WallRunMaxLookAngle = 65f;
+        [Tooltip("Look angles up to this (degrees) keep ALL horizontal speed on entry. Between this and the max look angle, speed is reduced. Set equal to the max look angle for no slowdown, or to 0 to slow every entry.")]
+        [Range(0f, 90f)] public float WallRunFullSpeedLookAngle = 30f;
+        [Tooltip("Fraction of horizontal speed kept when entering at exactly the max look angle (blends linearly from 1 at the full-speed angle).")]
+        [Range(0.1f, 1f)] public float WallRunSlowedRetention = 0.6f;
+
+        /// <summary>Angle (degrees, 0-90) between a horizontal look direction and the wall surface.</summary>
+        private float GetLookAngleToWall(Vector3 look, Vector3 wallNormal, Vector3 up)
+        {
+            Vector3 planarNormal = Vector3.ProjectOnPlane(wallNormal, up).normalized;
+            return Mathf.Asin(Mathf.Clamp01(Mathf.Abs(Vector3.Dot(look.normalized, planarNormal)))) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>Fraction of horizontal speed kept when entering a wall run at the given look angle.</summary>
+        private float GetWallRunEntrySpeedRetention(float lookAngle)
+        {
+            if (lookAngle <= WallRunFullSpeedLookAngle) return 1f;
+            if (WallRunMaxLookAngle <= WallRunFullSpeedLookAngle) return WallRunSlowedRetention;
+
+            float t = Mathf.Clamp01((lookAngle - WallRunFullSpeedLookAngle) / (WallRunMaxLookAngle - WallRunFullSpeedLookAngle));
+            return Mathf.Lerp(1f, WallRunSlowedRetention, t);
+        }
         [Tooltip("Cap on how far forward angled rays can reach (meters).")]
         public float WallRunMaxDetectionReach = 2.5f;
 
@@ -201,7 +222,6 @@ namespace KinematicCharacterController.Examples
                 _wallRayDebugTime = Time.time;
             }
 
-            float maxEntrySin = Mathf.Sin(WallRunMaxEntryAngle * Mathf.Deg2Rad);
             float bestGap = float.MaxValue;
             int bestDebugIndex = -1;
             bool found = false;
@@ -234,9 +254,11 @@ namespace KinematicCharacterController.Examples
                             // Real distance from the capsule surface to the wall plane
                             float planeGap = Vector3.Dot(hit.point - origin, -planarNormal) - radius;
 
+                            // Entry: judged by LOOK direction vs the wall (refDir is the camera heading when not wall running).
+                            // Staying: only drop the run if the velocity is clearly moving away from the wall.
                             bool angleOk = staying
-                                ? into <= 0.3f                                              // only drop the run if clearly moving away
-                                : !(into > 0.05f || Mathf.Abs(into) > maxEntrySin);          // entry: not away, not too head-on
+                                ? into <= 0.3f
+                                : GetLookAngleToWall(refDir, planarNormal, up) <= WallRunMaxLookAngle;
 
                             if (angleOk && planeGap <= gap && planeGap < bestGap)
                             {
@@ -264,15 +286,12 @@ namespace KinematicCharacterController.Examples
 
             if (found)
             {
-                Vector3 right = Vector3.Cross(up, travelDir);
+                Vector3 right = Vector3.Cross(up, staying ? travelDir : refDir);
                 isLeftWall = Vector3.Dot(-wallNormal, right) < 0f;
             }
             return found;
         }
 
-        /// <summary>
-        /// Initiates wall running state
-        /// </summary>
         private void StartWallRun(Vector3 wallNormal, bool isLeftWall)
         {
             Vector3 up = Motor.CharacterUp;
@@ -281,15 +300,27 @@ namespace KinematicCharacterController.Examples
             Vector3 vertical = vel - horizontal;
             float speed = horizontal.magnitude;
 
-            // Direction along the wall that matches our travel direction
+            // Still in the Default state here, so this returns the camera's horizontal facing
+            Vector3 look = GetWallRunReferenceDirection(up);
+
+            // Run direction along the wall follows where the player is LOOKING.
+            // Only if the look is almost perpendicular to the wall (ambiguous) do we fall back to velocity.
             Vector3 alongDir = Vector3.Cross(wallNormal, up).normalized;
-            if (Vector3.Dot(alongDir, horizontal) < 0f)
+            float lookAlong = Vector3.Dot(alongDir, look);
+            if (Mathf.Abs(lookAlong) > 0.05f)
+            {
+                if (lookAlong < 0f) alongDir = -alongDir;
+            }
+            else if (Vector3.Dot(alongDir, horizontal) < 0f)
             {
                 alongDir = -alongDir;
             }
 
-            // Move ALL horizontal speed onto the wall axis (no loss for the part that pointed at the wall)
-            Motor.BaseVelocity = alongDir * speed + vertical;
+            // Shallow-look entries keep all speed; steeper ones (up to the max look angle) lose some
+            float retention = GetWallRunEntrySpeedRetention(GetLookAngleToWall(look, wallNormal, up));
+
+            // Move ALL horizontal speed onto the wall axis (scaled by retention)
+            Motor.BaseVelocity = alongDir * (speed * retention) + vertical;
 
             // Set wall data BEFORE entering the state so OnStateEnter sees the new wall
             _wallRunNormal = wallNormal;

@@ -884,11 +884,8 @@ namespace KinematicCharacterController.Examples
                 Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                 if (horizontalVel.magnitude >= MinSpeedForWallRun)
                 {
-                    // Never start a wall run that travels opposite to where the player is facing (uses the camera directly)
-                    Vector3 facing = Vector3.ProjectOnPlane(playerCamera.transform.forward, Motor.CharacterUp);
-                    if (facing.sqrMagnitude > 0.0001f
-                        && Vector3.Dot(horizontalVel.normalized, facing.normalized) > 0f
-                        && DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
+                    // Entry is judged by look direction vs the wall (inside DetectWallForRunning)
+                    if (DetectWallForRunning(out Vector3 wallNormal, out bool isLeftWall))
                     {
                         StartWallRun(wallNormal, isLeftWall);
                     }
