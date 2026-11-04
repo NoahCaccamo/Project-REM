@@ -115,12 +115,18 @@ namespace KinematicCharacterController.Examples
         private float _wallRunCoyoteTimer;
         private bool _wallRunReversing;
 
+        [Tooltip("After releasing a grab (either hand), wall running cannot be initiated for this long (s). 0 = no timeout.")]
+        public float WallRunGrabReleaseTimeout = 0.5f;
+
+        private float _lastGrabReleaseTime = -999f;
+
         /// <summary>Input-based requirements for starting a wall run.</summary>
         private bool CanInitiateWallRun()
         {
             return _rawMoveInput.z > WallRunForwardInputThreshold
                 && !_crouchButtonHeld
-                && _wallRunBlockTimer <= 0f;
+                && _wallRunBlockTimer <= 0f
+                && Time.time - _lastGrabReleaseTime >= WallRunGrabReleaseTimeout;
         }
 
         /// <summary>

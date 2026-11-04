@@ -825,12 +825,20 @@ namespace KinematicCharacterController.Examples
 
             if (!wantsGrabL)
             {
+                if (isGrabbingL)
+                {
+                    _lastGrabReleaseTime = Time.time;
+                }
                 isGrabbingL = false;
                 LeftHandController.StopGrab();
             }
 
             if (!wantsGrabR)
             {
+                if (isGrabbingR)
+                {
+                    _lastGrabReleaseTime = Time.time;
+                }
                 isGrabbingR = false;
                 RightHandController.StopGrab();
             }

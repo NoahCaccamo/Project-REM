@@ -7062,6 +7062,7 @@ MonoBehaviour:
   WallRunReverseLookThreshold: 0.4
   WallRunReverseAcceleration: 90
   WallRunCoyoteTime: 0.15
+  WallRunGrabReleaseTimeout: 0.25
   DrawWallRunGizmos: 1
 --- !u!114 &6615662580611611646
 MonoBehaviour:
