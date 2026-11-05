@@ -1,0 +1,22 @@
+# Blender 5.1.2 MTL File: 'concrete_city_for_export.blend'
+# www.blender.org
+
+newmtl beams
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+map_Kd D:/itch/New_pack/Textures/rustybeam.png
+map_d D:/itch/New_pack/Textures/rustybeam.png
+
+newmtl concrete
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd D:/itch/New_pack/Textures/concrete.png
