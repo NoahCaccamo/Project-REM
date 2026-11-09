@@ -1788,6 +1788,23 @@ namespace KinematicCharacterController
         }
 
         /// <summary>
+        /// Lifts a velocity onto a surface while keeping its HORIZONTAL part exactly as it is. The vertical part is
+        /// whatever the surface needs, so changing slope never changes horizontal speed.
+        /// </summary>
+        private Vector3 HorizontalPreservingTangent(Vector3 velocity, Vector3 surfaceNormal)
+        {
+            float normalUp = Vector3.Dot(surfaceNormal, CharacterUp);
+            if (normalUp < 0.2f)
+            {
+                // Near-vertical surface: keep the original behaviour
+                return GetDirectionTangentToSurface(velocity, surfaceNormal) * velocity.magnitude;
+            }
+
+            Vector3 flat = Vector3.ProjectOnPlane(velocity, CharacterUp);
+            return flat + (CharacterUp * (-Vector3.Dot(flat, surfaceNormal) / normalUp));
+        }
+
+        /// <summary>
         /// Allows you to override the way velocity is projected on an obstruction
         /// </summary>
         public virtual void HandleVelocityProjection(ref Vector3 velocity, Vector3 obstructionNormal, bool stableOnHit)
@@ -1797,7 +1814,7 @@ namespace KinematicCharacterController
                 // On stable slopes, simply reorient the movement without any loss
                 if (stableOnHit)
                 {
-                    velocity = GetDirectionTangentToSurface(velocity, obstructionNormal) * velocity.magnitude;
+                    velocity = HorizontalPreservingTangent(velocity, obstructionNormal);
                 }
                 // On blocking hits, project the movement on the obstruction while following the grounding plane
                 else
@@ -1813,8 +1830,7 @@ namespace KinematicCharacterController
                 if (stableOnHit)
                 {
                     // Handle stable landing
-                    velocity = Vector3.ProjectOnPlane(velocity, CharacterUp);
-                    velocity = GetDirectionTangentToSurface(velocity, obstructionNormal) * velocity.magnitude;
+                    velocity = HorizontalPreservingTangent(velocity, obstructionNormal);
                 }
                 // Handle generic obstruction
                 else

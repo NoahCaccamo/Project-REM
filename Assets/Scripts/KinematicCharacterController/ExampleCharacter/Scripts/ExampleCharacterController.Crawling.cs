@@ -21,6 +21,23 @@ namespace KinematicCharacterController.Examples
         }
 
         /// <summary>
+        /// Turns a flat (horizontal) velocity into a velocity along the slope whose horizontal part is EXACTLY the
+        /// input. The vertical part is whatever the slope needs, so slopes inject or remove vertical speed instead
+        /// of costing horizontal speed.
+        /// </summary>
+        private static Vector3 FlatToSlope(Vector3 horizontal, Vector3 groundNormal, Vector3 up)
+        {
+            float normalUp = Vector3.Dot(groundNormal, up);
+            if (normalUp < 0.2f)
+            {
+                return horizontal; // near-vertical surface: no meaningful slope to follow
+            }
+
+            float vertical = -Vector3.Dot(horizontal, groundNormal) / normalUp;
+            return horizontal + (up * vertical);
+        }
+
+        /// <summary>
         /// Crawling ground movement: same friction/acceleration feel as walking, but capped at crawlStateMaxSpeed.
         /// </summary>
         private void HandleCrawling(ref Vector3 currentVelocity, float deltaTime)
@@ -34,12 +51,9 @@ namespace KinematicCharacterController.Examples
 
             Vector3 groundNormal = Motor.GroundingStatus.GroundNormal;
 
-            // Reorient velocity on slope
-            float magnitude = currentVelocity.magnitude;
-            currentVelocity = Motor.GetDirectionTangentToSurface(currentVelocity, groundNormal) * magnitude;
-
-            Vector3 inputRight = Vector3.Cross(_moveInputVector, Motor.CharacterUp);
-            Vector3 reorientedInput = Vector3.Cross(groundNormal, inputRight).normalized * _moveInputVector.magnitude;
+            // Work on the flat velocity; the slope part is rebuilt at the end
+            currentVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
+            Vector3 reorientedInput = _moveInputVector;
 
             // Friction first (skipped on a frame that is about to jump), then accelerate towards the wish velocity
             bool willJump = _jumpRequested && !_jumpConsumed;
@@ -65,6 +79,8 @@ namespace KinematicCharacterController.Examples
             {
                 currentVelocity = currentVelocity.normalized * crawlStateMaxSpeed;
             }
+
+            currentVelocity = FlatToSlope(currentVelocity, groundNormal, Motor.CharacterUp);
         }
     }
 }

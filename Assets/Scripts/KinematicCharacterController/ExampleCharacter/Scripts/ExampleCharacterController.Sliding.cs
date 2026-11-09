@@ -63,7 +63,9 @@ namespace KinematicCharacterController.Examples
                 desiredDirection = desiredDirection.normalized;
             }
 
-            desiredDirection = Vector3.ProjectOnPlane(desiredDirection, groundNormal).normalized;
+            // Steer on the flat plane so _slideDirection is always horizontal (slopes don't shorten it)
+            Vector3 flatDesired = Vector3.ProjectOnPlane(desiredDirection, Motor.CharacterUp);
+            desiredDirection = flatDesired.sqrMagnitude > 0.0001f ? flatDesired.normalized : _slideDirection;
 
             _slideDirection = Vector3.Slerp(_slideDirection, desiredDirection, 1f - Mathf.Exp(-slideSteeringSharpness * deltaTime));
 
@@ -88,7 +90,7 @@ namespace KinematicCharacterController.Examples
 
             // Real speed along the ground, as left by the motor after last frame's movement and collisions.
             // (_forwardSlideSpeed is only our *intended* speed, so hitting a wall doesn't change it.)
-            float actualSpeed = Vector3.ProjectOnPlane(currentVelocity, groundNormal).magnitude;
+            float actualSpeed = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp).magnitude;
 
             // Slowed to crawl speed (e.g. by a wall): hand over to crawling immediately, no waiting for the timer
             if (actualSpeed <= crawlStateMaxSpeed)
@@ -141,7 +143,7 @@ namespace KinematicCharacterController.Examples
             Vector3 forwardVelocity = _slideDirection * forwardSpeed;
 
             // Left and right strafing
-            Vector3 rightDir = Vector3.Cross(groundNormal, _slideDirection).normalized;
+            Vector3 rightDir = Vector3.Cross(Motor.CharacterUp, _slideDirection).normalized;
             Vector3 lateralVelocity = rightDir * (_slideStrafeInput * slideStrafeSpeed);
 
             /* old
@@ -161,7 +163,17 @@ namespace KinematicCharacterController.Examples
                 ? combinedVelocity.normalized * forwardSpeed
                 : combinedVelocity;
 
-            currentVelocity = new Vector3(newHorizontalVelocity.x, currentVelocity.y, newHorizontalVelocity.z);
+            if (Motor.GroundingStatus.IsStableOnGround)
+            {
+                // On the ground: follow the slope, keeping the horizontal speed exactly as computed
+                currentVelocity = FlatToSlope(newHorizontalVelocity, groundNormal, Motor.CharacterUp);
+            }
+            else
+            {
+                // Airborne (e.g. the frame after a slide jump, before the state switches): keep the vertical
+                // velocity untouched, exactly as the original code did
+                currentVelocity = newHorizontalVelocity + (Motor.CharacterUp * Vector3.Dot(currentVelocity, Motor.CharacterUp));
+            }
 
             // Track forward speed only (not the combined/inflated magnitude) so UI/other systems
             // reading _slideSpeed reflect the actual intended forward speed, unaffected by strafing.
