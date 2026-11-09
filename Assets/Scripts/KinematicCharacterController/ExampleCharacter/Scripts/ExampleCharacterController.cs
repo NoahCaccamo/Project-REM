@@ -1131,16 +1131,14 @@ namespace KinematicCharacterController.Examples
                         bool justLanded = Motor.GroundingStatus.IsStableOnGround && !Motor.LastGroundingStatus.IsStableOnGround;
                         if (Motor.GroundingStatus.IsStableOnGround && !justLanded)
                         {
-                            float currentVelocityMagnitude = currentVelocity.magnitude;
-
                             Vector3 effectiveGroundNormal = Motor.GroundingStatus.GroundNormal;
 
-                            // Reorient velocity on slope
-                            currentVelocity = Motor.GetDirectionTangentToSurface(currentVelocity, effectiveGroundNormal) * currentVelocityMagnitude;
+                            // All ground logic below works on the FLAT velocity, so slopes never change the horizontal speed.
+                            // The vertical part is rebuilt from the slope at the end of this branch.
+                            currentVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
 
-                            // Calculate target velocity
-                            Vector3 inputRight = Vector3.Cross(_moveInputVector, Motor.CharacterUp);
-                            Vector3 reorientedInput = Vector3.Cross(effectiveGroundNormal, inputRight).normalized * _moveInputVector.magnitude;
+                            // Input is already flat (camera-planar), so it is used as is
+                            Vector3 reorientedInput = _moveInputVector;
 
                             float speed = _sprintPressed ? crawlSpeed : sprintSpeed;
 
@@ -1198,13 +1196,15 @@ namespace KinematicCharacterController.Examples
                                     }
                                 }
                             }
+                            // Follow the slope: keep the horizontal speed exactly as computed, add the vertical part the slope needs
+                            currentVelocity = FlatToSlope(currentVelocity, effectiveGroundNormal, Motor.CharacterUp);
                         }
                         else if (justLanded)
                         {
                             // Just landed: preserve full velocity untouched this frame. Still reorient it flat
                             // onto the ground plane so it doesn't carry a stray vertical component into next
                             // frame's slide/ground logic.
-                            currentVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.GroundingStatus.GroundNormal);
+                            currentVelocity = FlatToSlope(Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp), Motor.GroundingStatus.GroundNormal, Motor.CharacterUp);
                         }
                         // Air movement
                         else if (!Motor.GroundingStatus.IsStableOnGround)
