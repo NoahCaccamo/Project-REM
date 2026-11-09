@@ -915,9 +915,8 @@ namespace KinematicCharacterController
 
                     if (!LastGroundingStatus.IsStableOnGround && GroundingStatus.IsStableOnGround)
                     {
-                        // Handle stable landing
-                        BaseVelocity = Vector3.ProjectOnPlane(BaseVelocity, CharacterUp);
-                        BaseVelocity = GetDirectionTangentToSurface(BaseVelocity, GroundingStatus.GroundNormal) * BaseVelocity.magnitude;
+                        // Handle stable landing (keep horizontal speed, add the vertical part the slope needs)
+                        BaseVelocity = HorizontalPreservingTangent(BaseVelocity, GroundingStatus.GroundNormal);
                     }
                 }
             }
