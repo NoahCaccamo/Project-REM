@@ -92,8 +92,8 @@ namespace KinematicCharacterController.Examples
         [Tooltip("Stops aligning once the view is within this many degrees of parallel.")]
         public float WallRunCameraAlignDeadzone = 3f;
 
-        /// <summary>True when the camera should be lowered (crouched/crouching and on the ground).</summary>
-        public bool WantsLowCamera => (_isCrouching || _shouldBeCrouching) && Motor.GroundingStatus.IsStableOnGround;
+        /// <summary>True when the camera should be lowered (crouched/crouching, removed the grounded reqs).</summary>
+        public bool WantsLowCamera => _isCrouching || _shouldBeCrouching;
 
         [Header("Wall Run Input Rules")]
         [Tooltip("Forward input must exceed this to enter / stay in a wall run.")]
