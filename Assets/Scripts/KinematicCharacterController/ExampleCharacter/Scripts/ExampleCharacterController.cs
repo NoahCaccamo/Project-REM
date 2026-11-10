@@ -343,6 +343,10 @@ namespace KinematicCharacterController.Examples
                         // only place (besides HandleSliding's own accel/decel) that _forwardSlideSpeed is
                         // set - it must not be re-derived from velocity magnitude every frame afterwards.
                         _forwardSlideSpeed = horizontalVel.magnitude;
+
+                        // Every slide is a bhop attempt. If it ends back in the running state without a jump,
+                        // the failed-bhop penalty applies (a jump clears this flag).
+                        _bhopPending = true;
                         break;
                     }
             }

@@ -36,6 +36,12 @@ namespace KinematicCharacterController.Examples
         [SerializeField] private float slideEndStopSpeed = 0.5f;
         [Tooltip("If the real speed (after collisions) is lower than the intended slide speed by more than this (m/s), the slide speed is lowered to match it. Prevents the slide from re-accelerating after hitting a wall.")]
         [SerializeField] private float slideCollisionSyncTolerance = 0.5f;
+        [Tooltip("How much faster the slide timer counts down while sliding uphill (on slopes steeper than Min Slide Angle). 1 = same as flat, 3 = three times faster. Scales with how directly you face uphill.")]
+        [SerializeField] private float slideUphillTimerMultiplier = 3f;
+        [Tooltip("Ground must be steeper than this angle (degrees) before sliding uphill drains the slide timer faster. Raise it if nearly flat surfaces are counting as slopes.")]
+        [SerializeField, Range(0f, 45f)] private float slideUphillMinAngle = 15f;
+        [Tooltip("How directly you must be facing uphill for the faster drain to apply. 0 = any uphill component, 0.5 = at least ~60 degrees toward uphill, 1 = straight uphill only.")]
+        [SerializeField, Range(0f, 1f)] private float slideUphillMinFacing = 0.3f;
         private float _slideTimer = 0f;
 
         private void HandleSliding(ref Vector3 currentVelocity, float deltaTime)
@@ -79,7 +85,19 @@ namespace KinematicCharacterController.Examples
 
             if (!isGoingDownhill)
             {
-                _slideTimer -= deltaTime;
+                float timerRate = 1f;
+
+                if (slopeAngle > slideUphillMinAngle && -downhillDot > slideUphillMinFacing)
+                {
+                    // Sliding uphill: drain the timer faster, blended by how directly we face uphill
+                    // (downhillDot is -1 straight uphill, 0 across the slope)
+                    // timerRate = Mathf.Lerp(1f, slideUphillTimerMultiplier, -downhillDot);
+
+                    // Just a flat rate
+                    timerRate = slideUphillTimerMultiplier;
+                }
+
+                _slideTimer -= deltaTime * timerRate;
             }
             if (_slideTimer < slideMinTimer)
             {

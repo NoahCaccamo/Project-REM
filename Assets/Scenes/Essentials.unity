@@ -7020,8 +7020,8 @@ MonoBehaviour:
   slideStrafeSpeed: 6
   slideNoInputFriction: 3.3
   slideStopSpeed: 2
-  slideMaxTimer: 1.8
-  slideMinTimer: 1
+  slideMaxTimer: 1.4
+  slideMinTimer: 0.7
   slideEndDecelRate: 20
   slideEndStopSpeed: 0.5
   slideCollisionSyncTolerance: 0.5
