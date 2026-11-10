@@ -1799,8 +1799,22 @@ namespace KinematicCharacterController
                 return GetDirectionTangentToSurface(velocity, surfaceNormal) * velocity.magnitude;
             }
 
+
+            // original, restore if the experimental version is not stable enough
+            /*
             Vector3 flat = Vector3.ProjectOnPlane(velocity, CharacterUp);
             return flat + (CharacterUp * (-Vector3.Dot(flat, surfaceNormal) / normalUp));
+            */
+
+            // Experimental version: clamp vertical speed to prevent speed jump bug
+            Vector3 flat = Vector3.ProjectOnPlane(velocity, CharacterUp);
+            float vertical = -Vector3.Dot(flat, surfaceNormal) / normalUp;
+
+            // A stable surface can never need more vertical speed than tan(MaxStableSlopeAngle) x horizontal speed
+            float maxVertical = flat.magnitude * Mathf.Tan(MaxStableSlopeAngle * Mathf.Deg2Rad);
+            vertical = Mathf.Clamp(vertical, -maxVertical, maxVertical);
+
+            return flat + (CharacterUp * vertical);
         }
 
         /// <summary>
@@ -1810,10 +1824,11 @@ namespace KinematicCharacterController
         {
             if (GroundingStatus.IsStableOnGround && !MustUnground())
             {
-                // On stable slopes, simply reorient the movement without any loss
                 if (stableOnHit)
                 {
-                    velocity = HorizontalPreservingTangent(velocity, obstructionNormal);
+                    // Handle stable landing (airborne): original behaviour, speed can never be inflated by the surface angle
+                    velocity = Vector3.ProjectOnPlane(velocity, obstructionNormal);
+                    velocity = GetDirectionTangentToSurface(velocity, obstructionNormal) * velocity.magnitude;
                 }
                 // On blocking hits, project the movement on the obstruction while following the grounding plane
                 else
