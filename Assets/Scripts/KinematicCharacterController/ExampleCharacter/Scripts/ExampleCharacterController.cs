@@ -328,7 +328,6 @@ namespace KinematicCharacterController.Examples
                     }
                 case CharacterState.Sliding:
                     {
-                        _slideTimer = slideMaxTimer;
                         Vector3 horizontalVel = new Vector3(Motor.BaseVelocity.x, 0f, Motor.BaseVelocity.z);
                         if (horizontalVel.magnitude > 0.1f)
                         {
@@ -405,7 +404,11 @@ namespace KinematicCharacterController.Examples
             Vector3 moveInputVector = Vector3.ClampMagnitude(new Vector3(inputs.MoveAxisRight, 0f, inputs.MoveAxisForward), 1f);
 
             _rawMoveInput = moveInputVector;
-            if (inputs.CrouchDown) _crouchButtonHeld = true;
+            if (inputs.CrouchDown)
+            {
+                _crouchButtonHeld = true;
+                _slideTimer = slideMaxTimer; // a fresh crouch press gets a full slide timer
+            }
             else if (inputs.CrouchUp) _crouchButtonHeld = false;
 
             // Calculate camera direction and rotation on the character plane
