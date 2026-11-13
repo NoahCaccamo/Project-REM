@@ -1193,6 +1193,7 @@ namespace KinematicCharacterController.Examples
                                     Vector3 wishDir = reorientedInput.normalized;
                                     float wishSpeed = speed * reorientedInput.magnitude;
 
+                                    float speedBeforeAccel = currentVelocity.magnitude;
                                     float speedInWishDir = Vector3.Dot(currentVelocity, wishDir);
                                     float addSpeed = wishSpeed - speedInWishDir;
 
@@ -1200,6 +1201,14 @@ namespace KinematicCharacterController.Examples
                                     {
                                         float accelSpeed = Mathf.Min(WalkAcceleration * wishSpeed * deltaTime, addSpeed);
                                         currentVelocity += wishDir * accelSpeed;
+
+                                        // Acceleration on the ground may turn and speed up the player, but never push total speed
+                                        // past what it was (or the wish speed, whichever is higher). Stops strafe speed gain.
+                                        float speedCap = Mathf.Max(speedBeforeAccel, wishSpeed);
+                                        if (currentVelocity.magnitude > speedCap)
+                                        {
+                                            currentVelocity = currentVelocity.normalized * speedCap;
+                                        }
                                     }
                                 }
                             }
