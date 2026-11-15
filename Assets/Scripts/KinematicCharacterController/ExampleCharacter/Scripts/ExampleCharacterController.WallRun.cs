@@ -7,7 +7,31 @@ namespace KinematicCharacterController.Examples
     {
         [Header("Wall Running")]
         public bool EnableWallRunning = true;
-        public float WallRunSpeed = 16.5f;
+        [Tooltip("Speed (m/s) added on top of your momentum while wall running. It is kept in the air and removed when you land.")]
+        public float WallRunSpeedBonus = 3.5f;
+        // Wall run speed floor: sprint speed (the pool floor) plus whatever bonus is currently applied.
+        // Fully applied, this is sprint speed + WallRunSpeedBonus = 16.5, but it never double-counts the bonus while it blends in.
+        public float WallRunSpeed => sprintSpeed + _stateBonus;
+
+        [Header("Wall Bhop")]
+        [Tooltip("Jumping off a wall within this many seconds of starting the wall run gives the full wall bhop bonus.")]
+        public float WallBhopPerfectWindow = 0.05f;
+        [Tooltip("Total window (s) from the start of the wall run in which a jump still gives a scaled-down bonus.")]
+        public float WallBhopTotalWindow = 0.2f;
+        [Tooltip("Speed (m/s) added for a perfectly timed wall bhop.")]
+        public float WallBhopBonusSpeed = 0.5f;
+
+        private float GetWallBhopBonusSpeed()
+        {
+            if (_wallRunTimer > WallBhopTotalWindow) return 0f;
+            if (_wallRunTimer <= WallBhopPerfectWindow) return WallBhopBonusSpeed;
+
+            float remaining = WallBhopTotalWindow - WallBhopPerfectWindow;
+            if (remaining <= 0f) return 0f;
+
+            float t = (_wallRunTimer - WallBhopPerfectWindow) / remaining;
+            return Mathf.Lerp(WallBhopBonusSpeed, 0f, Mathf.Clamp01(t));
+        }
         public float WallRunMaxDuration = 2f;
         public float WallRunGravityMultiplier = 0.2f;
         public float WallRunJumpHeight = 12f;

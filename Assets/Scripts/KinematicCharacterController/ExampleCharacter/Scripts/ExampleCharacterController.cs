@@ -871,7 +871,7 @@ namespace KinematicCharacterController.Examples
             // Crouched on the ground: fast = slide, slow = crawl
             if (_isCrouching && Motor.GroundingStatus.IsStableOnGround)
             {
-                float groundSpeed = HorizontalSpeed();
+                float groundSpeed = PoolSpeed();
 
                 if (CurrentCharacterState == CharacterState.Crawling)
                 {
@@ -1111,6 +1111,8 @@ namespace KinematicCharacterController.Examples
 
         public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)
         {
+            ApplyStateBonus(ref currentVelocity, deltaTime);
+
             switch (CurrentCharacterState)
             {
                 case CharacterState.Default:
@@ -1540,13 +1542,25 @@ namespace KinematicCharacterController.Examples
                                 // WALL JUMP: Preserve ALL momentum and add boost
                                 Vector3 horizontalVelocity = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp);
 
-                                // Apply momentum boost to horizontal velocity
-                                horizontalVelocity *= WallRunJumpMomentumBoost;
+                                // WALL BHOP: a jump right after touching the wall gives a small speed bonus
+                                float wallBhopBonus = GetWallBhopBonusSpeed();
+                                if (wallBhopBonus > 0f && horizontalVelocity.sqrMagnitude > 0.0001f)
+                                {
+                                    horizontalVelocity += horizontalVelocity.normalized * wallBhopBonus;
+                                    _bhopBonusBank += wallBhopBonus;
+                                }
 
-                                // Jump away from wall with fixed upward component
-                                Vector3 wallJumpVelocity = (_wallRunNormal * WallRunJumpAwayForce) + (Motor.CharacterUp * WallRunJumpHeight);
+                                // Jump away from the wall by REDIRECTING the horizontal velocity: the away force only sets the
+                                // turn angle, the horizontal speed (including any wall bhop bonus) stays exactly the same
+                                float horizontalSpeed = horizontalVelocity.magnitude;
+                                Vector3 awayDirection = horizontalSpeed > 0.01f
+                                    ? (horizontalVelocity + (_wallRunNormal * WallRunJumpAwayForce)).normalized
+                                    : _wallRunNormal;
 
-                                currentVelocity = horizontalVelocity + wallJumpVelocity;
+                                // Slow or stationary wall jumps still get pushed off at the away force
+                                float launchSpeed = horizontalSpeed > 0.01f ? horizontalSpeed : WallRunJumpAwayForce;
+
+                                currentVelocity = (awayDirection * launchSpeed) + (Motor.CharacterUp * WallRunJumpHeight);
 
                                 _jumpRequested = false;
                                 _jumpConsumed = true;
