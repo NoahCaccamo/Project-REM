@@ -820,12 +820,12 @@ namespace KinematicCharacterController.Examples
                 Interact(true);
             }
 
-            if (wantsGrabL && !isGrabbingL)
+            if (wantsGrabL && !isGrabbingL && !LeftHandController.IsOnCooldown)
             {
                 TryGrabL();
             }
 
-            if (wantsGrabR && !isGrabbingR)
+            if (wantsGrabR && !isGrabbingR && !RightHandController.IsOnCooldown)
             {
                 TryGrabR();
             }
@@ -1515,11 +1515,28 @@ namespace KinematicCharacterController.Examples
 
                                 TransitionToState(CharacterState.Default);
                                 _wallRunCoyoteTimer = 0f;
+
+                                // Only hands that were actually holding on get a cooldown
+                                if (isGrabbingL)
+                                {
+                                    LeftHandController.StartReleaseCooldown();
+                                }
+                                else
+                                {
+                                    LeftHandController.StopGrab();
+                                }
+
+                                if (isGrabbingR)
+                                {
+                                    RightHandController.StartReleaseCooldown();
+                                }
+                                else
+                                {
+                                    RightHandController.StopGrab();
+                                }
+
                                 isGrabbingL = false;
                                 isGrabbingR = false;
-                                LeftHandController.StopGrab();
-                                RightHandController.StopGrab();
-                                // MAKE A TIMER WHERE YOU CANT GRAB FOR A LITTLE WHEN JUMPING
                             }
                         }
                         break;
