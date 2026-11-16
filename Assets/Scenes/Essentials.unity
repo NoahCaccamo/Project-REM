@@ -7013,7 +7013,7 @@ MonoBehaviour:
   BigMomentumLossWindow: 0.25
   BigMomentumLossThreshold: 10
   MinSpeedThresholdForMomentumLoss: 10
-  slideBaseSpeed: 16
+  slideSpeedBonus: 3
   slideFriction: 0.25
   minSlideAngle: 0
   slideSteeringSharpness: 8
@@ -7028,9 +7028,13 @@ MonoBehaviour:
   slideUphillTimerMultiplier: 3
   slideUphillMinAngle: 15
   slideUphillMinFacing: 0.3
+  StateBonusChangeRate: 350
   speedDisplay: {fileID: 0}
   EnableWallRunning: 1
-  WallRunSpeed: 16.5
+  WallRunSpeedBonus: 3.5
+  WallBhopPerfectWindow: 0.05
+  WallBhopTotalWindow: 0.2
+  WallBhopBonusSpeed: 0.5
   WallRunMaxDuration: 263.8
   WallRunGravityMultiplier: 0.2
   WallRunJumpHeight: 12
