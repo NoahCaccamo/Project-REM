@@ -16,6 +16,22 @@ public class HandController : MonoBehaviour
     public Sprite openSprite;
     public Sprite grabbingSprite;
 
+    [Header("Grab Cooldown")]
+    [Tooltip("How long (seconds) this hand can't grab after the player jumps off a handhold. This is also how long the hand takes to return to its default position.")]
+    public float jumpGrabCooldown = 1f;
+    [Tooltip("Hand return progress over time. X = normalized time (0-1), Y = progress from the release position (0) to the default position (1). Values above 1 overshoot.")]
+    public AnimationCurve returnCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    private bool isReturning = false;
+    private float returnElapsed = 0f;
+    private float returnDuration = 0f;
+    private Vector3 returnStartPosition;
+
+    /// <summary>
+    /// True while the hand is returning to its default position after a jump. Grabbing is blocked during this time.
+    /// </summary>
+    public bool IsOnCooldown => isReturning;
+
     [Header("Hand Visual")]
     [SerializeField] private Transform handModelParent; // REDUNDANT, USE ANCHOR
     [SerializeField] public GameObject currentHandModel;
@@ -28,6 +44,23 @@ public class HandController : MonoBehaviour
 
     void Update()
     {
+        if (isReturning)
+        {
+            returnElapsed += Time.deltaTime;
+            float t = returnDuration > 0f ? Mathf.Clamp01(returnElapsed / returnDuration) : 1f;
+            float progress = returnCurve.Evaluate(t);
+
+            // The end point follows the camera anchor so the hand stays correct while the player moves
+            transform.position = Vector3.LerpUnclamped(returnStartPosition, cameraAnchor.position, progress);
+
+            if (t >= 1f)
+            {
+                isReturning = false;
+                grabBlend = 0f;
+            }
+            return;
+        }
+
         grabBlend = Mathf.MoveTowards(grabBlend, isGrabbing ? 1f : 0f, Time.deltaTime * transitionSpeed);
 
         Vector3 targetPos = Vector3.Lerp(cameraAnchor.position, worldTarget, grabBlend);
@@ -43,6 +76,7 @@ public class HandController : MonoBehaviour
 
     public void StartGrab(Vector3 _worldTarget)
     {
+        isReturning = false;
         worldTarget = _worldTarget;
         isGrabbing = true;
         spriteRenderer.sprite = grabbingSprite;
@@ -52,6 +86,26 @@ public class HandController : MonoBehaviour
     {
         isGrabbing = false;
         spriteRenderer.sprite = idleSprite;
+    }
+
+    /// <summary>
+    /// Releases the hand and starts the grab cooldown. The hand travels from where it currently is
+    /// back to its default position over <see cref="jumpGrabCooldown"/> seconds, following <see cref="returnCurve"/>.
+    /// </summary>
+    public void StartReleaseCooldown()
+    {
+        isGrabbing = false;
+        spriteRenderer.sprite = idleSprite;
+
+        if (jumpGrabCooldown <= 0f)
+        {
+            return;
+        }
+
+        returnStartPosition = transform.position;
+        returnDuration = jumpGrabCooldown;
+        returnElapsed = 0f;
+        isReturning = true;
     }
 
     public void OpenHand()

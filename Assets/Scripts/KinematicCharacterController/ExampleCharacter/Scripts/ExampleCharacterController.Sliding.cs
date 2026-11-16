@@ -18,7 +18,11 @@ namespace KinematicCharacterController.Examples
         private float _forwardSlideSpeed;
 
         [Header("Sliding")]
-        [SerializeField] private float slideBaseSpeed = 16f;
+        [Tooltip("Speed (m/s) added on top of your momentum while sliding. It is kept in the air and removed when you land without sliding.")]
+        [SerializeField] private float slideSpeedBonus = 3f;
+        // Slide speed floor: sprint speed (the pool floor) plus whatever bonus is currently applied.
+        // Fully applied, this is sprint speed + slideSpeedBonus = 16, but it never double-counts the bonus while it blends in.
+        private float slideBaseSpeed => sprintSpeed + _stateBonus;
         [Tooltip("Slide friction. While sliding faster than slideBaseSpeed, speed drops by (this x current speed) per second, never below slideBaseSpeed. Lower = longer slides at high speed.")]
         [SerializeField] private float slideFriction = 0.25f;
         [SerializeField] private float minSlideAngle = 10f;
@@ -111,7 +115,7 @@ namespace KinematicCharacterController.Examples
             float actualSpeed = Vector3.ProjectOnPlane(currentVelocity, Motor.CharacterUp).magnitude;
 
             // Slowed to crawl speed (e.g. by a wall): hand over to crawling immediately, no waiting for the timer
-            if (actualSpeed <= crawlStateMaxSpeed)
+            if (actualSpeed - _stateBonus <= crawlStateMaxSpeed)
             {
                 _forwardSlideSpeed = actualSpeed;
                 StopSlide();
@@ -153,6 +157,7 @@ namespace KinematicCharacterController.Examples
             }
             else
             {
+                // Below the minimum slide speed (sprint speed + bonus = 16): get up to it, same as before
                 forwardSpeed = slideBaseSpeed;
             }
 
@@ -198,7 +203,7 @@ namespace KinematicCharacterController.Examples
             _slideSpeed = forwardSpeed;
 
             // Once the slide has dropped to crawl speed (e.g. the timer ran out and speed bled off), hand over.
-            if (forwardSpeed <= crawlStateMaxSpeed)
+            if (forwardSpeed - _stateBonus <= crawlStateMaxSpeed)
             {
                 StopSlide();
             }
@@ -214,7 +219,7 @@ namespace KinematicCharacterController.Examples
             // Still crouched on the ground and slow enough: crawl instead of standing up
             bool canCrawl = _isCrouching && _shouldBeCrouching
                 && Motor.GroundingStatus.IsStableOnGround
-                && HorizontalSpeed() <= crawlStateMaxSpeed + crawlExitSpeedMargin;
+                && PoolSpeed() <= crawlStateMaxSpeed + crawlExitSpeedMargin;
 
             TransitionToState(canCrawl ? CharacterState.Crawling : CharacterState.Default);
         }

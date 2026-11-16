@@ -171,6 +171,40 @@ MonoBehaviour:
   idleSprite: {fileID: 21300000, guid: 1de6efe049c78f240b81962d35f81f1e, type: 3}
   openSprite: {fileID: 21300000, guid: 4ac2b06cbfe01e24da651dcedbe89526, type: 3}
   grabbingSprite: {fileID: 21300000, guid: 59ebe83c9480af44f9a34837aa753ccb, type: 3}
+  jumpGrabCooldown: 0.25
+  returnCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.34910417
+      value: 0.5730826
+      inSlope: 2.1428955
+      outSlope: 2.1428955
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.12222372
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   handModelParent: {fileID: 7783303}
   currentHandModel: {fileID: 0}
   deliveryWaypoint: {fileID: 5573864683772550981}
@@ -5733,6 +5767,40 @@ MonoBehaviour:
   idleSprite: {fileID: 21300000, guid: 1de6efe049c78f240b81962d35f81f1e, type: 3}
   openSprite: {fileID: 21300000, guid: 4ac2b06cbfe01e24da651dcedbe89526, type: 3}
   grabbingSprite: {fileID: 21300000, guid: 59ebe83c9480af44f9a34837aa753ccb, type: 3}
+  jumpGrabCooldown: 0.25
+  returnCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.34910417
+      value: 0.5730826
+      inSlope: 2.1428955
+      outSlope: 2.1428955
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.12222372
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   handModelParent: {fileID: 2063987305}
   currentHandModel: {fileID: 0}
   deliveryWaypoint: {fileID: 5573864683772550981}
@@ -7013,7 +7081,7 @@ MonoBehaviour:
   BigMomentumLossWindow: 0.25
   BigMomentumLossThreshold: 10
   MinSpeedThresholdForMomentumLoss: 10
-  slideBaseSpeed: 16
+  slideSpeedBonus: 3
   slideFriction: 0.25
   minSlideAngle: 0
   slideSteeringSharpness: 8
@@ -7028,9 +7096,13 @@ MonoBehaviour:
   slideUphillTimerMultiplier: 3
   slideUphillMinAngle: 15
   slideUphillMinFacing: 0.3
+  StateBonusChangeRate: 350
   speedDisplay: {fileID: 0}
   EnableWallRunning: 1
-  WallRunSpeed: 16.5
+  WallRunSpeedBonus: 3.5
+  WallBhopPerfectWindow: 0.05
+  WallBhopTotalWindow: 0.2
+  WallBhopBonusSpeed: 0.5
   WallRunMaxDuration: 263.8
   WallRunGravityMultiplier: 0.2
   WallRunJumpHeight: 12
