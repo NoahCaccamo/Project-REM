@@ -209,6 +209,7 @@ public class FishWrangler : MonoBehaviour
         loopCenter.position = transform.position; // Center the loop at current position
         isFirstWrangleFrame = true;
 
+        /*
         // Start the appropriate minigame based on selection
         if (minigameType == MinigameType.GuitarHero)
         {
@@ -231,6 +232,8 @@ public class FishWrangler : MonoBehaviour
                 platformerMinigame.StartMinigame(this, player);
             }
         }
+        */
+        MinigameManager.Instance.StartMinigameNOW();
 
         Debug.Log($"Fish wrangling started! Collect {notesRequiredToCapture} to capture!");
     }
@@ -243,6 +246,7 @@ public class FishWrangler : MonoBehaviour
         successfulNotesHit = 0;
         isFirstWrangleFrame = false;
 
+        /*
         // End the active minigame
         if (minigameType == MinigameType.GuitarHero && guitarHeroMinigame != null)
         {
@@ -256,6 +260,8 @@ public class FishWrangler : MonoBehaviour
         {
             platformerMinigame.EndMinigame(false);
         }
+        */
+        MinigameManager.Instance.Stop();
 
         EndBuck();
 

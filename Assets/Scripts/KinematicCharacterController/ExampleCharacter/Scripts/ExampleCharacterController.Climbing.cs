@@ -497,5 +497,25 @@ namespace KinematicCharacterController.Examples
             }
         }
 
+        /// <summary>
+        /// True while wrangling a fish with both hands. Outputs the world point midway between the two grab points.
+        /// </summary>
+        public bool TryGetWrangleLookPoint(out Vector3 point)
+        {
+            point = Vector3.zero;
+
+            if (currentFish == null || !currentFish.IsBeingWrangled() || !isGrabbingL || !isGrabbingR)
+            {
+                return false;
+            }
+
+            Vector3 leftPoint = currentFish.transform.TransformPoint(leftHandFishLocalOffset);
+            Vector3 rightPoint = currentFish.transform.TransformPoint(rightHandFishLocalOffset);
+            point = (leftPoint + rightPoint) * 0.5f;
+
+            return true;
+        }
+
+
     }
 }

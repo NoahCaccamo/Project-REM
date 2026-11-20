@@ -103,6 +103,29 @@ namespace KinematicCharacterController.Examples
             PlanarDirection = Vector3.ProjectOnPlane(PlanarDirection, FollowTransform.up).normalized;
         }
 
+        // Smoothly turns the camera (yaw and pitch) to face a world point
+        public void SmoothLookAt(Vector3 worldPoint, float deltaTime, float sharpness)
+        {
+            if (FollowTransform == null) return;
+
+            Vector3 direction = worldPoint - Transform.position;
+            if (direction.sqrMagnitude < 0.0001f) return;
+
+            Vector3 up = FollowTransform.up;
+            float t = 1f - Mathf.Exp(-sharpness * deltaTime);
+
+            Vector3 flat = Vector3.ProjectOnPlane(direction, up);
+            if (flat.sqrMagnitude > 0.0001f)
+            {
+                PlanarDirection = Vector3.Slerp(PlanarDirection, flat.normalized, t).normalized;
+            }
+
+            // Positive vertical angle looks down, so looking above the horizon is negative
+            float pitch = Vector3.Angle(flat, direction) * (Vector3.Dot(direction, up) > 0f ? -1f : 1f);
+            pitch = Mathf.Clamp(pitch, MinVerticalAngle, MaxVerticalAngle);
+            _targetVerticalAngle = Mathf.Lerp(_targetVerticalAngle, pitch, t);
+        }
+
         public void UpdateWithInput(float deltaTime, float zoomInput, Vector3 rotationInput)
         {
             if (FollowTransform)

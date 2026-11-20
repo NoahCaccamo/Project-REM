@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class MinigameManager : MonoBehaviour
+public class MinigameManagerDepricated : MonoBehaviour
 {
 
     public GameObject obstacle;

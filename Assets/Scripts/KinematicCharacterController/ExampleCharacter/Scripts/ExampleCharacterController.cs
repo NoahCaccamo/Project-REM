@@ -863,6 +863,12 @@ namespace KinematicCharacterController.Examples
                 }
             }
 
+            if (currentFish != null && currentFish.IsBeingWrangled() && MinigameManager.Instance != null)
+            {
+                MinigameManager.Instance.SetBothHandsGripping(isGrabbingL && isGrabbingR);
+            }
+
+
             if (!isGrabbingL && !isGrabbingR && CurrentCharacterState == CharacterState.Climbing)
             {
                 TransitionToState(CharacterState.Default);

@@ -88,6 +88,8 @@ namespace KinematicCharacterController.Examples
             HandleCameraInput();
         }
 
+        public float WrangleLookSharpness = 6f;
+
         private void HandleCameraInput()
         {
             // Create the look input vector for the camera
@@ -107,8 +109,17 @@ namespace KinematicCharacterController.Examples
         scrollInput = 0f;
 #endif
 
-            // Gentle auto-yaw toward wall-parallel while wall running and looking into the wall
-            CharacterCamera.AddYaw(Character.GetWallRunCameraYaw(CharacterCamera.PlanarDirection, Time.deltaTime));
+            // Fish wrangling with both hands: lock look input and face the point between the hands
+            if (Character.TryGetWrangleLookPoint(out Vector3 wrangleLookPoint))
+            {
+                lookInputVector = Vector3.zero;
+                CharacterCamera.SmoothLookAt(wrangleLookPoint, Time.deltaTime, WrangleLookSharpness);
+            }
+            else
+            {
+                // Gentle auto-yaw toward wall-parallel while wall running and looking into the wall
+                CharacterCamera.AddYaw(Character.GetWallRunCameraYaw(CharacterCamera.PlanarDirection, Time.deltaTime));
+            }
 
             CharacterCamera.CrouchCameraActive = Character.WantsLowCamera;
 
