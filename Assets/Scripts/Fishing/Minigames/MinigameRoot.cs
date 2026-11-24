@@ -119,8 +119,25 @@ public abstract class MinigameRoot : MonoBehaviour, IMinigame
         OnMoveInput(move);
     }
 
-    /// <summary>Call from your game logic when it's over; the manager closes it.</summary>
-    protected void Finish() => Finished?.Invoke(this);
+    /// <summary>True if the game ended with Succeed(). Valid once Finished has been raised.</summary>
+    public bool Succeeded { get; private set; }
+
+    /// <summary>Call when the player wins (fish captured). The manager closes the game.</summary>
+    protected void Succeed()
+    {
+        Succeeded = true;
+        Finished?.Invoke(this);
+    }
+
+    /// <summary>Call when the player loses or the game ends without a capture.</summary>
+    protected void Fail()
+    {
+        Succeeded = false;
+        Finished?.Invoke(this);
+    }
+
+    /// <summary>Raise (via Finish()) when the game is over. Counts as a fail; prefer Succeed()/Fail().</summary>
+    protected void Finish() => Fail();
 
     protected virtual void OnBegin() { }
     protected virtual void OnEnd() { }

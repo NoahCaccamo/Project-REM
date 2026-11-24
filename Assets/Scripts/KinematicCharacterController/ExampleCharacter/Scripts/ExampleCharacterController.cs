@@ -1901,6 +1901,26 @@ namespace KinematicCharacterController.Examples
             }
         }
 
+        /// <summary>
+        /// Called when the fish being wrangled is captured. Releases both hands and clears the fish reference.
+        /// The release cooldown stops the hands from instantly re-grabbing the fish before it is destroyed.
+        /// </summary>
+        public void OnFishCaptured()
+        {
+            currentFish = null;
+
+            if (isGrabbingL || isGrabbingR)
+            {
+                _lastGrabReleaseTime = Time.time;
+            }
+
+            isGrabbingL = false;
+            isGrabbingR = false;
+
+            LeftHandController.StartReleaseCooldown();
+            RightHandController.StartReleaseCooldown();
+        }
+
         protected void OnLeaveStableGround()
         {
         }

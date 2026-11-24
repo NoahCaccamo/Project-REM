@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,6 +34,7 @@ public class MinigameManager : MonoBehaviour
     MinigameRoot active;
 
     public bool IsPlaying => active != null;
+    Action<bool> onComplete;
 
     void Awake()
     {
@@ -94,10 +96,11 @@ public class MinigameManager : MonoBehaviour
         }
     }
 
-    public MinigameRoot StartMinigame(MinigameRoot prefab)
+    public MinigameRoot StartMinigame(MinigameRoot prefab, Action<bool> onComplete = null)
     {
         Stop();
 
+        this.onComplete = onComplete;
         active = Instantiate(prefab, anchor.position, anchor.rotation, anchor);
         active.Finished += OnGameFinished;
         active.Begin(rt);
@@ -108,10 +111,11 @@ public class MinigameManager : MonoBehaviour
     }
 
     // TEMP DELETE THIS
-    public MinigameRoot StartMinigameNOW()
+    public MinigameRoot StartMinigameNOW(Action<bool> onComplete = null)
     {
         Stop();
 
+        this.onComplete = onComplete;
         active = Instantiate(debugPrefab, anchor.position, anchor.rotation, anchor);
         active.Finished += OnGameFinished;
         active.Begin(rt);
@@ -136,7 +140,14 @@ public class MinigameManager : MonoBehaviour
 
     void OnGameFinished(MinigameRoot game)
     {
-        if (game == active) Stop();
+        if (game != active) return;
+
+        // Take the callback and result before Stop() clears them
+        Action<bool> callback = onComplete;
+        bool success = game.Succeeded;
+
+        Stop();
+        callback?.Invoke(success);
     }
 
     /// <summary>Called by the character each frame while wrangling. Two hands = full speed + control.</summary>

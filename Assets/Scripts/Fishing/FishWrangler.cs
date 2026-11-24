@@ -233,7 +233,7 @@ public class FishWrangler : MonoBehaviour
             }
         }
         */
-        MinigameManager.Instance.StartMinigameNOW();
+        MinigameManager.Instance.StartMinigameNOW(OnMinigameFinished);
 
         Debug.Log($"Fish wrangling started! Collect {notesRequiredToCapture} to capture!");
     }
@@ -284,32 +284,37 @@ public class FishWrangler : MonoBehaviour
         Debug.Log("Missed note! Stamina drained!");
     }
 
+    private void OnMinigameFinished(bool success)
+    {
+        if (!isBeingWrangled) return;
+
+        if (success)
+        {
+            OnCaptureSuccess();
+        }
+        else
+        {
+            Debug.Log("Minigame failed, fish not captured.");
+        }
+    }
+
     private void OnCaptureSuccess()
     {
         Debug.Log("FISH CAPTURED!");
 
-        // Award item to player
-        if (wranglingPlayer != null && capturedFishItem != null)
+        if (wranglingPlayer != null)
         {
-            // Give item to player - you'll need to integrate with your inventory system
-            Debug.Log($"Player received: {capturedFishItem.name}");
+            if (capturedFishItem != null)
+            {
+                // Give item to player - you'll need to integrate with your inventory system
+                Debug.Log($"Player received: {capturedFishItem.name}");
+            }
+
+            // Let go of the fish so the player isn't left climbing a destroyed object
+            wranglingPlayer.OnFishCaptured();
         }
 
-        // End the active minigame
-        if (minigameType == MinigameType.GuitarHero && guitarHeroMinigame != null)
-        {
-            guitarHeroMinigame.EndMinigame(true);
-        }
-        else if (minigameType == MinigameType.BulletHell && bulletHellMinigame != null)
-        {
-            bulletHellMinigame.EndMinigame(true);
-        }
-        else if (minigameType == MinigameType.Platformer && platformerMinigame != null)
-        {
-            platformerMinigame.EndMinigame(true);
-        }
-
-        // Destroy or deactivate fish
+        isBeingWrangled = false;
         Destroy(gameObject);
     }
 

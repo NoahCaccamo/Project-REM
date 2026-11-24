@@ -1413,9 +1413,10 @@ MonoBehaviour:
   antiAliasing: 1
   depthBits: 24
   anchor: {fileID: 1731178920}
-  debugPrefab: {fileID: 1349081946572696365, guid: c8d54a908b9e8d241bfd1bfd2d025634,
+  debugPrefab: {fileID: 8592058470182057084, guid: 32cfa047200c994458ea2d2f1c6cd829,
     type: 3}
   debugStartKey: 92
+  oneHandTimeScale: 0.25
 --- !u!1 &489095134
 GameObject:
   m_ObjectHideFlags: 0
@@ -3406,6 +3407,7 @@ MonoBehaviour:
   Character: {fileID: 6611558534064293502}
   CharacterCamera: {fileID: 5530455799321397187}
   BackpackSurface: {fileID: 1113142809}
+  WrangleLookSharpness: 6
 --- !u!4 &1004713170
 Transform:
   m_ObjectHideFlags: 0

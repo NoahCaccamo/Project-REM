@@ -1,9 +1,13 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class FrostyOvums : MinigameRoot
 {
     [SerializeField] GameObject pan;
     private Rigidbody panRigidbody;
+    [SerializeField] FriedEgg eggPrefab;
+    private List<FriedEgg> activeEggs = new List<FriedEgg>();
+
     [SerializeField] private float sensitivity = 2.5f;
     [SerializeField] float tiltSpeedX = 50f;
     [SerializeField] float tiltSpeedY = 50f;
@@ -38,6 +42,11 @@ public class FrostyOvums : MinigameRoot
 
             initialRotation = pan.transform.rotation;
         }
+    }
+
+    private void Start()
+    {
+        SpawnEgg(new Vector3(0f, 1f, 0f));
     }
 
     void Update()
@@ -107,5 +116,48 @@ public class FrostyOvums : MinigameRoot
         // Smoothly move the kinematic Rigidbody so it imparts physics velocity to items on top
         Quaternion smoothedRotation = Quaternion.Slerp(panRigidbody.rotation, targetRotation, smoothSpeed * FixedDeltaTime);
         panRigidbody.MoveRotation(smoothedRotation);
+    }
+
+    public void SpawnEgg(Vector3 spawnOffset)
+    {
+        if (eggPrefab == null)
+        {
+            Debug.LogError("Egg prefab is not assigned.");
+            return;
+        }
+        Vector3 spawnPosition = pan.transform.position + spawnOffset;
+        FriedEgg newEgg = Instantiate(eggPrefab, spawnPosition, eggPrefab.transform.rotation, this.transform);
+        activeEggs.Add(newEgg);
+
+
+        newEgg.OnEggOutOfBound += HandleEggOutOfBound;
+        newEgg.OnEggCooked += HandleEggCooked;
+    }
+
+    private void HandleEggOutOfBound(FriedEgg deadEgg)
+    {
+        if (activeEggs.Contains(deadEgg))
+        {
+            deadEgg.OnEggOutOfBound -= HandleEggOutOfBound;
+            activeEggs.Remove(deadEgg);
+            // Destruction handled in the egg's own script, so no need to destroy it here.
+
+            SpawnEgg(new Vector3(0f, 1f, 0f));
+        }
+    }
+
+    private void HandleEggCooked(FriedEgg egg, int cookingLevel)
+    {
+        if (cookingLevel >= 2) // Fully cooked
+        {
+            if (activeEggs.Contains(egg))
+            {
+                // Catch the fish
+                egg.OnEggCooked -= HandleEggCooked;
+                activeEggs.Remove(egg);
+                Succeed();
+
+            }
+        }
     }
 }
